@@ -11,6 +11,34 @@ body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
   font-family: 'Inter', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mobile optimizations */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Improve tap targets on mobile */
+button, a {
+  touch-action: manipulation;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better focus styles for accessibility */
+:focus {
+  outline: 2px solid rgba(99, 102, 241, 0.6);
+  outline-offset: 2px;
+}
+
+/* Hide focus outline for mouse users, but keep for keyboard */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 @layer components {
@@ -28,5 +56,22 @@ body {
   
   .section-title {
     @apply text-heading font-bold mb-4;
+  }
+  
+  /* Mobile-friendly card padding */
+  @media (max-width: 640px) {
+    .card {
+      @apply p-3;
+    }
+  }
+  
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400;
+  }
+  
+  /* Glass effect */
+  .glass {
+    @apply bg-black bg-opacity-30 backdrop-blur-sm border border-gray-700/50;
   }
 } 

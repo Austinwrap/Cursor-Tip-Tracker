@@ -36,10 +36,13 @@ export default function Analytics() {
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2 text-center">Analytics Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">Analytics Dashboard</h1>
         
         {!isPaid && (
-          <div className="bg-gradient-to-r from-purple-900 to-blue-900 border-2 border-purple-500 rounded-lg p-6 shadow-lg mb-8">
+          <div className="bg-gradient-to-r from-purple-900/80 to-blue-900/80 backdrop-blur-sm border border-purple-500/50 rounded-lg p-6 shadow-xl mb-8 relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob"></div>
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
+            
             <h2 className="text-xl font-bold mb-2 text-center">Premium Features</h2>
             <p className="text-center mb-4">
               Upgrade to access these powerful analytics tools and maximize your earnings!
@@ -47,7 +50,7 @@ export default function Analytics() {
             <div className="text-center">
               <a 
                 href="/upgrade" 
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 px-6 rounded-full hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 px-6 rounded-full hover:from-purple-500 hover:to-blue-500 transition-all shadow-lg transform hover:scale-105 hover:shadow-purple-500/50"
               >
                 Upgrade Now
               </a>
@@ -57,76 +60,100 @@ export default function Analytics() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Monthly Chart */}
-          <div className="bg-gray-900 border-2 border-gray-700 rounded-lg p-6 shadow-lg">
+          <div className="bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
             <h2 className="text-xl font-semibold mb-4">Monthly Earnings</h2>
             
             {isPaid ? (
               <MonthlyChart />
             ) : (
-              <div className="h-64 flex flex-col items-center justify-center bg-black bg-opacity-50 rounded-lg border border-gray-800">
-                <div className="text-5xl mb-4">🔒</div>
+              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300">
+                <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
                 <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
                 <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
                   Visualize your monthly earnings with beautiful charts
                 </p>
+                <a 
+                  href="/upgrade" 
+                  className="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Unlock Now →
+                </a>
               </div>
             )}
           </div>
           
           {/* Daily Averages */}
-          <div className="bg-gray-900 border-2 border-gray-700 rounded-lg p-6 shadow-lg">
+          <div className="bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
             <h2 className="text-xl font-semibold mb-4">Daily Averages</h2>
             
             {isPaid ? (
               <DailyAveragesChart />
             ) : (
-              <div className="h-64 flex flex-col items-center justify-center bg-black bg-opacity-50 rounded-lg border border-gray-800">
-                <div className="text-5xl mb-4">🔒</div>
+              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300">
+                <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
                 <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
                 <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
                   See which days of the week are most profitable for you
                 </p>
+                <a 
+                  href="/upgrade" 
+                  className="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Unlock Now →
+                </a>
               </div>
             )}
           </div>
           
           {/* Best/Worst Days */}
-          <div className="bg-gray-900 border-2 border-gray-700 rounded-lg p-6 shadow-lg">
+          <div className="bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
             <h2 className="text-xl font-semibold mb-4">Best & Worst Days</h2>
             
             {isPaid ? (
               <BestWorstDays />
             ) : (
-              <div className="h-64 flex flex-col items-center justify-center bg-black bg-opacity-50 rounded-lg border border-gray-800">
-                <div className="text-5xl mb-4">🔒</div>
+              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300">
+                <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
                 <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
                 <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
                   Identify your most and least profitable days
                 </p>
+                <a 
+                  href="/upgrade" 
+                  className="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Unlock Now →
+                </a>
               </div>
             )}
           </div>
           
           {/* Projections */}
-          <div className="bg-gray-900 border-2 border-gray-700 rounded-lg p-6 shadow-lg">
+          <div className="bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
             <h2 className="text-xl font-semibold mb-4">Future Projections</h2>
             
             {isPaid ? (
               <Projections />
             ) : (
-              <div className="h-64 flex flex-col items-center justify-center bg-black bg-opacity-50 rounded-lg border border-gray-800">
-                <div className="text-5xl mb-4">🔒</div>
+              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300">
+                <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
                 <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
                 <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
                   Get AI-powered predictions about your future earnings
                 </p>
+                <a 
+                  href="/upgrade" 
+                  className="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Unlock Now →
+                </a>
               </div>
             )}
           </div>
         </div>
         
         {/* AI Assistant - Premium Only */}
-        <div className="mt-8 bg-gray-900 border-2 border-gray-700 rounded-lg p-6 shadow-lg">
+        <div className="mt-8 bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
           <h2 className="text-xl font-semibold mb-4">AI Assistant</h2>
           
           {isPaid ? (
@@ -144,21 +171,24 @@ export default function Analytics() {
                   className="flex-grow bg-gray-800 border border-gray-700 rounded-l-lg px-4 py-2"
                   disabled
                 />
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-r-lg">
+                <button className="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-500 transition-colors">
                   Send
                 </button>
               </div>
             </div>
           ) : (
-            <div className="h-64 flex flex-col items-center justify-center bg-black bg-opacity-50 rounded-lg border border-gray-800">
-              <div className="text-5xl mb-4">🔒</div>
+            <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300 relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-5 animate-blob"></div>
+              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-5 animate-blob animation-delay-2000"></div>
+              
+              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
               <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
               <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
                 Chat with our AI assistant about your finances and get personalized advice
               </p>
               <a 
                 href="/upgrade" 
-                className="mt-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 px-6 rounded-full hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg"
+                className="mt-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 px-6 rounded-full hover:from-purple-500 hover:to-blue-500 transition-all shadow-lg transform hover:scale-105"
               >
                 Upgrade to Access
               </a>
@@ -166,6 +196,32 @@ export default function Analytics() {
           )}
         </div>
       </div>
+      
+      <style jsx>{`
+        @keyframes blob {
+          0% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1);
+          }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </main>
   );
 } 
