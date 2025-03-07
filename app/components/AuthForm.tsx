@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
+import { useRouter } from 'next/navigation';
 
 type AuthFormProps = {
   isSignUp?: boolean;
@@ -11,24 +12,43 @@ const AuthForm: React.FC<AuthFormProps> = ({ isSignUp = false }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setLoading(true);
 
     try {
-      const { error } = isSignUp 
-        ? await signUp(email, password)
-        : await signIn(email, password);
-
-      if (error) {
-        setError(error.message);
+      if (isSignUp) {
+        // Sign up flow
+        const { error, success } = await signUp(email, password);
+        
+        if (error) {
+          setError(error.message || 'Failed to create account. Please try again.');
+        } else if (success) {
+          setSuccess('Account created successfully! You may need to verify your email before signing in.');
+          // Clear form
+          setEmail('');
+          setPassword('');
+        }
+      } else {
+        // Sign in flow
+        const { error, success } = await signIn(email, password);
+        
+        if (error) {
+          setError(error.message || 'Invalid email or password. Please try again.');
+        } else if (success) {
+          setSuccess('Signing in...');
+          // Router redirect is handled in AuthContext
+        }
       }
     } catch (err) {
-      setError('Authentication error');
+      setError('Authentication error. Please try again later.');
       console.error('Auth error:', err);
     } finally {
       setLoading(false);
@@ -45,6 +65,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ isSignUp = false }) => {
         {error && (
           <div className="bg-red-900/50 border-l-4 border-red-500 text-white p-3 rounded-sm text-sm">
             {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="bg-green-900/50 border-l-4 border-green-500 text-white p-3 rounded-sm text-sm">
+            {success}
           </div>
         )}
         
