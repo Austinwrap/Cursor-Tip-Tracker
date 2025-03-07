@@ -2,10 +2,17 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabase } from '@/app/lib/supabase';
 
-// Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-04-10', // Use the latest API version
-});
+// Initialize Stripe with the secret key if available
+let stripe: Stripe | null = null;
+try {
+  if (process.env.STRIPE_SECRET_KEY) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2024-04-10', // Use the latest API version
+    });
+  }
+} catch (error) {
+  console.warn('Failed to initialize Stripe:', error);
+}
 
 // This is a placeholder for the actual Stripe integration
 // You'll need to install the Stripe package: npm install stripe
@@ -13,6 +20,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 export async function POST(request: Request) {
   try {
+    // Check if Stripe is initialized
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Stripe is not configured' },
+        { status: 503 }
+      );
+    }
+
     const { plan, userId } = await request.json();
     
     if (!userId) {
