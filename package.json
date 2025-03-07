@@ -1,7 +1,7 @@
 {
-  "name": "bartender-tip-tracker",
+  "name": "cursor-tip-tracker",
   "version": "1.0.0",
-  "description": "A web application for bartenders to track their daily tips",
+  "description": "A modern web application for service industry professionals to track and analyze their tips",
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
@@ -9,9 +9,9 @@
     "start": "next start",
     "lint": "next lint"
   },
-  "keywords": ["bartender", "tips", "tracker", "nextjs", "supabase"],
+  "keywords": ["cursor", "tips", "tracker", "nextjs", "supabase", "service-industry", "analytics"],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
     "@types/node": "^20.10.4",
