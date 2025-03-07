@@ -11,8 +11,10 @@ const Header: React.FC = () => {
   return (
     <header className="bg-black border-b border-gray-800 py-5 px-6">
       <div className="container mx-auto flex justify-between items-center">
-        <Link href="/" className="text-2xl font-bold text-white tracking-tight">
-          TIP TRACKER
+        <Link href="/" className="text-2xl font-bold tracking-tight">
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-500 to-blue-500">
+            TipTracker.ai
+          </span>
         </Link>
         
         {user ? (
