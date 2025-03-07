@@ -4,12 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { getTips, Tip } from '../lib/supabase';
 import { formatDate, formatCurrency } from '../lib/dateUtils';
+import PastTipForm from './PastTipForm';
 
 const TipCalendar: React.FC = () => {
   const [tips, setTips] = useState<Tip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -33,12 +35,35 @@ const TipCalendar: React.FC = () => {
     fetchTips();
   }, [user]);
 
+  const handleTipAdded = async () => {
+    // Refresh tips after a new one is added
+    if (!user) return;
+    
+    try {
+      const tipsData = await getTips(user.id);
+      setTips(tipsData);
+      // Close the form after successful addition
+      setSelectedDate(null);
+    } catch (err) {
+      console.error('Error refreshing tips:', err);
+    }
+  };
+
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
 
   const getFirstDayOfMonth = (year: number, month: number) => {
     return new Date(year, month, 1).getDay();
+  };
+
+  const handleDateClick = (dateString: string) => {
+    // Toggle selected date
+    if (selectedDate === dateString) {
+      setSelectedDate(null);
+    } else {
+      setSelectedDate(dateString);
+    }
   };
 
   const renderCalendar = () => {
@@ -71,13 +96,18 @@ const TipCalendar: React.FC = () => {
       const dateString = date.toISOString().split('T')[0];
       const hasTip = dateString in tipMap;
       const isToday = new Date().toISOString().split('T')[0] === dateString;
+      const isSelected = selectedDate === dateString;
+      const isPastOrToday = date <= new Date();
       
       calendarDays.push(
         <div 
           key={dateString} 
           className={`h-20 border border-gray-800 p-2 transition-colors ${
             isToday ? 'bg-gray-900' : 'bg-black/20'
-          } ${hasTip ? 'hover:bg-gray-800' : ''}`}
+          } ${isSelected ? 'ring-2 ring-white' : ''} ${
+            isPastOrToday ? 'cursor-pointer hover:bg-gray-800' : ''
+          }`}
+          onClick={() => isPastOrToday && handleDateClick(dateString)}
         >
           <div className="flex justify-between items-start">
             <span className={`text-xs ${isToday ? 'font-bold text-white' : 'text-gray-500'}`}>
@@ -94,33 +124,43 @@ const TipCalendar: React.FC = () => {
     }
     
     return (
-      <div className="bg-black border border-gray-800 rounded-sm p-6 shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <button 
-            onClick={() => setCurrentMonth(new Date(year, month - 1))}
-            className="text-gray-500 hover:text-white transition-colors"
-          >
-            ←
-          </button>
-          <h2 className="text-xl font-bold text-white uppercase tracking-wide">
-            {monthNames[month].substring(0, 3)} {year}
-          </h2>
-          <button 
-            onClick={() => setCurrentMonth(new Date(year, month + 1))}
-            className="text-gray-500 hover:text-white transition-colors"
-          >
-            →
-          </button>
+      <div className="space-y-6">
+        <div className="bg-black border border-gray-800 rounded-sm p-6 shadow-lg">
+          <div className="flex justify-between items-center mb-6">
+            <button 
+              onClick={() => setCurrentMonth(new Date(year, month - 1))}
+              className="text-gray-500 hover:text-white transition-colors"
+            >
+              ←
+            </button>
+            <h2 className="text-xl font-bold text-white uppercase tracking-wide">
+              {monthNames[month].substring(0, 3)} {year}
+            </h2>
+            <button 
+              onClick={() => setCurrentMonth(new Date(year, month + 1))}
+              className="text-gray-500 hover:text-white transition-colors"
+            >
+              →
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-7 gap-1">
+            {dayNames.map(day => (
+              <div key={day} className="text-center text-gray-500 font-medium py-2 text-xs">
+                {day}
+              </div>
+            ))}
+            {calendarDays}
+          </div>
+          
+          <div className="mt-4 text-center">
+            <p className="text-gray-400 text-sm">Click on a date to add or edit a tip</p>
+          </div>
         </div>
         
-        <div className="grid grid-cols-7 gap-1">
-          {dayNames.map(day => (
-            <div key={day} className="text-center text-gray-500 font-medium py-2 text-xs">
-              {day}
-            </div>
-          ))}
-          {calendarDays}
-        </div>
+        {selectedDate && (
+          <PastTipForm onTipAdded={handleTipAdded} selectedDate={selectedDate} />
+        )}
       </div>
     );
   };

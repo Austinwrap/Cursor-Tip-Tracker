@@ -25,6 +25,9 @@ const Header: React.FC = () => {
               <Link href="/history" className="text-gray-400 hover:text-white transition-colors text-sm uppercase tracking-wider">
                 History
               </Link>
+              <Link href="/past-tips" className="text-gray-400 hover:text-white transition-colors text-sm uppercase tracking-wider">
+                Past Tips
+              </Link>
               <Link href="/analytics" className="text-gray-400 hover:text-white transition-colors text-sm uppercase tracking-wider flex items-center">
                 Analytics
                 {!isPaid && <span className="ml-1 text-yellow-500 text-xs">★</span>}
@@ -82,6 +85,13 @@ const Header: React.FC = () => {
               onClick={() => setMobileMenuOpen(false)}
             >
               History
+            </Link>
+            <Link 
+              href="/past-tips" 
+              className="text-gray-400 hover:text-white transition-colors text-sm uppercase tracking-wider"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Past Tips
             </Link>
             <Link 
               href="/analytics" 

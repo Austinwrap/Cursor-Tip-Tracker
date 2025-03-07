@@ -54,6 +54,31 @@ export default function Dashboard() {
           </div>
         </div>
         
+        {/* Past Tips Feature Highlight */}
+        <div className="mt-8 bg-gradient-to-r from-blue-900/80 to-teal-900/80 backdrop-blur-sm border border-blue-500/50 rounded-lg p-6 shadow-xl">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="mb-4 md:mb-0 md:mr-6">
+              <h2 className="text-2xl font-bold mb-2">New Feature: Add Past Tips</h2>
+              <p className="text-gray-300 mb-4">
+                Forgot to log your tips from previous days? No problem! You can now easily add or edit tips for any past date.
+              </p>
+              <ul className="list-disc list-inside text-gray-300 mb-4 space-y-1">
+                <li>Add tips for any previous date</li>
+                <li>Edit existing tips with a single click</li>
+                <li>Available for all users - free and premium</li>
+              </ul>
+            </div>
+            <div className="flex-shrink-0">
+              <a 
+                href="/past-tips" 
+                className="bg-gradient-to-r from-blue-600 to-teal-600 text-white font-bold py-3 px-8 rounded-full hover:from-blue-500 hover:to-teal-500 transition-all shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 inline-block"
+              >
+                Try It Now
+              </a>
+            </div>
+          </div>
+        </div>
+        
         {/* Premium Features Preview */}
         <div className="mt-12 bg-gradient-to-r from-purple-900/80 to-blue-900/80 backdrop-blur-sm border border-purple-500/50 rounded-lg p-6 shadow-xl">
           <div className="absolute -mt-16 -ml-6 opacity-30 text-8xl text-purple-300 select-none">✨</div>
