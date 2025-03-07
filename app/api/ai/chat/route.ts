@@ -4,8 +4,9 @@ import fs from 'fs';
 import path from 'path';
 
 // Google Cloud AI API integration
-// This uses the service account key file you already have
-const GOOGLE_APPLICATION_CREDENTIALS = path.join(process.cwd(), 'tip-tracker-453021-6c1b66b9bf5e.json');
+// In production, you would use environment variables for Google Cloud credentials
+// const GOOGLE_CLOUD_PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'tip-tracker-453021';
+// const GOOGLE_CLOUD_LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
 
 // Function to get user's tip data
 async function getUserTipData(userId: string) {
@@ -156,8 +157,8 @@ export async function POST(request: Request) {
     
     // Initialize Vertex with your project and location
     const vertex_ai = new VertexAI({
-      project: 'tip-tracker-453021',
-      location: 'us-central1',
+      project: process.env.GOOGLE_CLOUD_PROJECT_ID,
+      location: process.env.GOOGLE_CLOUD_LOCATION,
     });
     
     const model = 'gemini-pro';

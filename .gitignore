@@ -30,4 +30,10 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts 
+next-env.d.ts
+
+# API keys and secrets
+*.json.key
+*-key.json
+*-credentials.json
+tip-tracker-*.json 
