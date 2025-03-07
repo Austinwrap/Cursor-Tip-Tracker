@@ -27,12 +27,33 @@ export default function Upgrade() {
     );
   }
 
-  const handleUpgradeClick = (plan: string) => {
-    // This would connect to Stripe in a real implementation
-    alert(`In a real implementation, this would redirect to Stripe payment for the ${plan} plan.`);
-    
-    // For demo purposes, we'll just show an alert
-    console.log(`User selected ${plan} plan`);
+  const handleUpgradeClick = async (plan: string) => {
+    try {
+      // Call the Stripe checkout API
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan,
+          userId: user?.id,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        console.error('No checkout URL returned');
+        alert('There was an error creating the checkout session. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      alert('There was an error creating the checkout session. Please try again.');
+    }
   };
 
   return (
