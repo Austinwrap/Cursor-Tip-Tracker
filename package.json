@@ -9,7 +9,15 @@
     "start": "next start",
     "lint": "next lint"
   },
-  "keywords": ["cursor", "tips", "tracker", "nextjs", "supabase", "service-industry", "analytics"],
+  "keywords": [
+    "cursor",
+    "tips",
+    "tracker",
+    "nextjs",
+    "supabase",
+    "service-industry",
+    "analytics"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -17,6 +25,7 @@
     "@types/node": "^20.10.4",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
+    "@vercel/analytics": "^1.5.0",
     "autoprefixer": "^10.4.16",
     "chart.js": "^4.4.1",
     "date-fns": "^2.30.0",
