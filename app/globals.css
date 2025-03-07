@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 211, 211, 211;
+  --background-rgb: 0, 0, 0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  font-family: 'Inter', 'Roboto', sans-serif;
+}
+
+@layer components {
+  .btn {
+    @apply bg-black text-white border border-accent py-2 px-4 rounded hover:bg-hover transition-colors;
+  }
+  
+  .input {
+    @apply bg-black text-white border border-accent p-2 rounded placeholder-gray-500 w-full;
+  }
+  
+  .card {
+    @apply bg-black border border-accent rounded p-4;
+  }
+  
+  .section-title {
+    @apply text-heading font-bold mb-4;
+  }
+} 
