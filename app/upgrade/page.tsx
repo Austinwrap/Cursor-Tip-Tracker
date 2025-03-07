@@ -49,6 +49,54 @@ export default function Upgrade() {
           <p className="text-xl text-center text-gray-400 mb-12">Unlock powerful features to maximize your earnings</p>
         </div>
         
+        {/* Featured AI Chat Preview */}
+        <div className="mb-16 max-w-4xl mx-auto bg-gradient-to-r from-purple-900/30 to-blue-900/30 backdrop-blur-sm border border-purple-500/30 rounded-lg p-6 shadow-xl">
+          <div className="flex flex-col md:flex-row items-center">
+            <div className="md:w-1/2 mb-6 md:mb-0 md:pr-8">
+              <div className="inline-block bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs px-2 py-1 rounded-full mb-2">NEW</div>
+              <h2 className="text-2xl font-bold mb-4">AI Chat Assistant</h2>
+              <p className="text-gray-300 mb-4">
+                Our new AI Chat Assistant helps you analyze your tips and earnings with natural language. Just ask questions like:
+              </p>
+              <ul className="space-y-2 text-gray-300 mb-6">
+                <li className="flex items-center">
+                  <span className="text-green-500 mr-2">✓</span>
+                  "What was my best tipping day last month?"
+                </li>
+                <li className="flex items-center">
+                  <span className="text-green-500 mr-2">✓</span>
+                  "How much did I make this day last year?"
+                </li>
+                <li className="flex items-center">
+                  <span className="text-green-500 mr-2">✓</span>
+                  "What's my average tip on Fridays?"
+                </li>
+              </ul>
+            </div>
+            <div className="md:w-1/2 bg-black/40 backdrop-blur-sm rounded-lg border border-purple-400/20 p-4">
+              <div className="space-y-4">
+                <div className="flex items-start">
+                  <div className="bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                    <span className="text-white text-xs">You</span>
+                  </div>
+                  <div className="bg-blue-600/50 rounded-lg p-3 text-white">
+                    What was my average tip last week?
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                    <span className="text-white text-xs">AI</span>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-3 text-gray-300">
+                    Last week your average tip was $178.50 per shift, which is 12% higher than your overall average!
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Monthly Plan */}
           <div className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden transition-all hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 relative group">
@@ -81,7 +129,7 @@ export default function Upgrade() {
                 </li>
                 <li className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span>AI-powered earnings forecasts</span>
+                  <span><strong>AI Chat Assistant</strong></span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
@@ -138,7 +186,7 @@ export default function Upgrade() {
                 </li>
                 <li className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span>AI-powered earnings forecasts</span>
+                  <span><strong>AI Chat Assistant</strong></span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
@@ -174,7 +222,7 @@ export default function Upgrade() {
             
             <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 hover:border-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20">
               <div className="text-blue-400 text-3xl mb-4">💬</div>
-              <h3 className="text-xl font-bold mb-2">AI Assistant</h3>
+              <h3 className="text-xl font-bold mb-2">AI Chat Assistant</h3>
               <p className="text-gray-400">Chat with our AI assistant about your finances, get personalized advice, and more.</p>
             </div>
           </div>

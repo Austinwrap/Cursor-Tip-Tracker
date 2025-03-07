@@ -8,6 +8,7 @@ import MonthlyChart from '../components/analytics/MonthlyChart';
 import DailyAveragesChart from '../components/analytics/DailyAveragesChart';
 import BestWorstDays from '../components/analytics/BestWorstDays';
 import Projections from '../components/analytics/Projections';
+import AIChatAssistant from '../components/analytics/AIChatAssistant';
 
 export default function Analytics() {
   const { user, isPaid, loading } = useAuth();
@@ -55,6 +56,17 @@ export default function Analytics() {
                 Upgrade Now
               </a>
             </div>
+          </div>
+        )}
+        
+        {/* AI Chat Assistant - Featured prominently at the top for paid users */}
+        {isPaid && (
+          <div className="mb-8">
+            <div className="flex items-center mb-4">
+              <h2 className="text-xl font-semibold">AI Chat Assistant</h2>
+              <span className="ml-2 px-2 py-0.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs rounded-full">PREMIUM</span>
+            </div>
+            <AIChatAssistant />
           </div>
         )}
         
@@ -152,49 +164,16 @@ export default function Analytics() {
           </div>
         </div>
         
-        {/* AI Assistant - Premium Only */}
-        <div className="mt-8 bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
-          <h2 className="text-xl font-semibold mb-4">AI Assistant</h2>
-          
-          {isPaid ? (
-            <div>
-              <p className="mb-4">Ask our AI assistant about your finances, get personalized advice, and more.</p>
-              <div className="bg-black rounded-lg p-4 mb-4 h-64 overflow-y-auto border border-gray-800">
-                <div className="text-gray-400 italic text-center mt-24">
-                  AI chat would appear here in the full implementation
-                </div>
-              </div>
-              <div className="flex">
-                <input 
-                  type="text" 
-                  placeholder="Ask about your finances..." 
-                  className="flex-grow bg-gray-800 border border-gray-700 rounded-l-lg px-4 py-2"
-                  disabled
-                />
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-500 transition-colors">
-                  Send
-                </button>
-              </div>
+        {/* AI Chat Assistant - For free users, shown at the bottom */}
+        {!isPaid && (
+          <div className="mt-8">
+            <div className="flex items-center mb-4">
+              <h2 className="text-xl font-semibold">AI Chat Assistant</h2>
+              <span className="ml-2 px-2 py-0.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs rounded-full">PREMIUM</span>
             </div>
-          ) : (
-            <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-5 animate-blob"></div>
-              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-5 animate-blob animation-delay-2000"></div>
-              
-              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
-              <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
-              <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
-                Chat with our AI assistant about your finances and get personalized advice
-              </p>
-              <a 
-                href="/upgrade" 
-                className="mt-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 px-6 rounded-full hover:from-purple-500 hover:to-blue-500 transition-all shadow-lg transform hover:scale-105"
-              >
-                Upgrade to Access
-              </a>
-            </div>
-          )}
-        </div>
+            <AIChatAssistant />
+          </div>
+        )}
       </div>
       
       <style jsx>{`

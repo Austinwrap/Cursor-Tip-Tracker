@@ -78,10 +78,13 @@ export default function Dashboard() {
             </div>
             
             <div className="bg-black/40 backdrop-blur-sm p-5 rounded-lg border border-purple-400/30 text-center transform hover:scale-105 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
-              <h3 className="text-lg font-semibold mb-2">AI Forecasting</h3>
-              <p className="text-gray-300 text-sm">Get AI-powered predictions for future earnings</p>
-              <div className="mt-4 h-32 flex items-center justify-center">
-                <div className="text-gray-500">🔒 Premium Feature</div>
+              <h3 className="text-lg font-semibold mb-2">AI Chat Assistant</h3>
+              <p className="text-gray-300 text-sm">Chat with our AI to analyze your tips and get insights</p>
+              <div className="mt-4 h-32 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-40 h-40 bg-purple-600/10 rounded-full animate-pulse"></div>
+                </div>
+                <div className="text-gray-500 relative z-10">🔒 Premium Feature</div>
               </div>
             </div>
           </div>
@@ -94,6 +97,45 @@ export default function Dashboard() {
               Upgrade Now - Just $6/month
             </a>
             <p className="mt-2 text-sm text-gray-300">Or $30/year (save 58%)</p>
+          </div>
+          
+          {/* AI Chat Preview */}
+          <div className="mt-10 bg-black/30 backdrop-blur-sm p-5 rounded-lg border border-purple-400/20 max-w-2xl mx-auto">
+            <div className="flex items-center mb-4">
+              <div className="bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center mr-3">
+                <span className="text-white text-xs">AI</span>
+              </div>
+              <div className="text-lg font-semibold text-gray-300">Ask me anything about your tips!</div>
+            </div>
+            
+            <div className="space-y-4 opacity-70">
+              <div className="flex items-start">
+                <div className="bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                  <span className="text-white text-xs">You</span>
+                </div>
+                <div className="bg-blue-600/50 rounded-lg p-3 text-white">
+                  What was my best tipping day last month?
+                </div>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="bg-purple-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                  <span className="text-white text-xs">AI</span>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-gray-300">
+                  Your best day was March 15th when you made $245.00 in tips! That's 58% higher than your daily average.
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4 flex items-center justify-center">
+              <a 
+                href="/upgrade" 
+                className="text-purple-400 hover:text-purple-300 text-sm font-medium"
+              >
+                Unlock AI Chat Assistant →
+              </a>
+            </div>
           </div>
         </div>
       </div>
