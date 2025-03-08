@@ -39,7 +39,3 @@ jobs:
     
     - name: Build
       run: npm run build
-      
-    # Skipping test step as it's not properly configured
-    # - name: Test
-    #   run: npm test || true # Continue even if tests fail for now 
