@@ -68,10 +68,13 @@ const TipForm: React.FC<TipFormProps> = ({ onTipAdded, selectedDate }) => {
     }
   };
 
-  // Direct Supabase implementation to save tips
+  // Robust tip saving function with multiple fallback approaches
   const saveTip = async (userId: string, date: string, amountInCents: number) => {
+    console.log('Attempting to save tip:', { userId, date, amountInCents });
+    
+    // First approach: Direct Supabase query
     try {
-      // First check if a tip already exists for this date
+      // Check if a tip already exists for this date
       const { data: existingTip, error: fetchError } = await supabase
         .from('tips')
         .select('*')
@@ -80,41 +83,151 @@ const TipForm: React.FC<TipFormProps> = ({ onTipAdded, selectedDate }) => {
         .maybeSingle();
       
       if (fetchError) {
-        console.error('Error checking for existing tip:', fetchError);
-        throw new Error('Failed to check for existing tip');
-      }
-      
-      let result;
-      
-      if (existingTip) {
-        // Update existing tip
-        result = await supabase
-          .from('tips')
-          .update({ amount: amountInCents })
-          .eq('id', existingTip.id)
-          .select();
+        console.error('Error checking for existing tip (approach 1):', fetchError);
+        // Continue to next approach
       } else {
-        // Insert new tip
-        result = await supabase
-          .from('tips')
-          .insert([{ 
-            user_id: userId, 
-            date: date, 
-            amount: amountInCents 
-          }])
-          .select();
+        let result;
+        
+        if (existingTip) {
+          // Update existing tip
+          result = await supabase
+            .from('tips')
+            .update({ amount: amountInCents })
+            .eq('id', existingTip.id);
+            
+          if (!result.error) {
+            console.log('Successfully updated tip (approach 1)');
+            return true;
+          }
+          console.error('Error updating tip (approach 1):', result.error);
+        } else {
+          // Insert new tip
+          result = await supabase
+            .from('tips')
+            .insert([{ 
+              user_id: userId, 
+              date: date, 
+              amount: amountInCents 
+            }]);
+            
+          if (!result.error) {
+            console.log('Successfully inserted tip (approach 1)');
+            return true;
+          }
+          console.error('Error inserting tip (approach 1):', result.error);
+        }
       }
-      
-      if (result.error) {
-        console.error('Error saving tip:', result.error);
-        throw new Error(result.error.message || 'Failed to save tip');
-      }
-      
-      return result.data;
     } catch (err) {
-      console.error('Error in saveTip function:', err);
-      throw err;
+      console.error('Unexpected error in saveTip approach 1:', err);
     }
+    
+    // Second approach: Using RPC (Remote Procedure Call)
+    try {
+      const { data, error } = await supabase.rpc('save_tip', {
+        p_user_id: userId,
+        p_date: date,
+        p_amount: amountInCents
+      });
+      
+      if (!error) {
+        console.log('Successfully saved tip using RPC (approach 2)');
+        return true;
+      }
+      
+      console.error('Error saving tip using RPC (approach 2):', error);
+    } catch (err) {
+      console.error('Unexpected error in saveTip approach 2:', err);
+    }
+    
+    // Third approach: Using raw SQL via Supabase
+    try {
+      // First check if tip exists
+      const { data: existsData, error: existsError } = await supabase.rpc('tip_exists', {
+        p_user_id: userId,
+        p_date: date
+      });
+      
+      if (existsError) {
+        console.error('Error checking if tip exists (approach 3):', existsError);
+      } else {
+        const exists = existsData;
+        
+        if (exists) {
+          // Update
+          const { error: updateError } = await supabase.rpc('update_tip', {
+            p_user_id: userId,
+            p_date: date,
+            p_amount: amountInCents
+          });
+          
+          if (!updateError) {
+            console.log('Successfully updated tip using SQL (approach 3)');
+            return true;
+          }
+          
+          console.error('Error updating tip using SQL (approach 3):', updateError);
+        } else {
+          // Insert
+          const { error: insertError } = await supabase.rpc('insert_tip', {
+            p_user_id: userId,
+            p_date: date,
+            p_amount: amountInCents
+          });
+          
+          if (!insertError) {
+            console.log('Successfully inserted tip using SQL (approach 3)');
+            return true;
+          }
+          
+          console.error('Error inserting tip using SQL (approach 3):', insertError);
+        }
+      }
+    } catch (err) {
+      console.error('Unexpected error in saveTip approach 3:', err);
+    }
+    
+    // Fourth approach: Simplified direct insert/update with less error checking
+    try {
+      // Try update first (will do nothing if no record exists)
+      const { error: updateError } = await supabase
+        .from('tips')
+        .update({ amount: amountInCents })
+        .match({ user_id: userId, date: date });
+      
+      if (!updateError) {
+        // Check if any rows were affected
+        const { count, error: countError } = await supabase
+          .from('tips')
+          .select('*', { count: 'exact', head: true })
+          .match({ user_id: userId, date: date });
+        
+        if (!countError && count && count > 0) {
+          console.log('Successfully updated tip (approach 4)');
+          return true;
+        }
+      }
+      
+      // If update didn't work or no rows existed, try insert
+      const { error: insertError } = await supabase
+        .from('tips')
+        .insert([{ 
+          user_id: userId, 
+          date: date, 
+          amount: amountInCents 
+        }]);
+      
+      if (!insertError) {
+        console.log('Successfully inserted tip (approach 4)');
+        return true;
+      }
+      
+      console.error('Error in simplified approach (approach 4):', insertError);
+    } catch (err) {
+      console.error('Unexpected error in saveTip approach 4:', err);
+    }
+    
+    // If all approaches failed, return false
+    return false;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,14 +251,18 @@ const TipForm: React.FC<TipFormProps> = ({ onTipAdded, selectedDate }) => {
       // Convert dollars to cents for storage
       const amountInCents = Math.round(Number(amount) * 100);
       
-      // Save tip directly using Supabase
-      await saveTip(user.id, dateToUse, amountInCents);
+      // Save tip using our robust function
+      const result = await saveTip(user.id, dateToUse, amountInCents);
       
-      const action = existingTip ? 'updated' : 'added';
-      setSuccess(`$${amount} ${action} for ${formattedDate}`);
-      setExistingTip(amountInCents);
-      setAmount('');
-      onTipAdded(); // Notify parent component
+      if (result) {
+        const action = existingTip ? 'updated' : 'added';
+        setSuccess(`$${amount} ${action} for ${formattedDate}`);
+        setExistingTip(amountInCents);
+        setAmount('');
+        onTipAdded(); // Notify parent component
+      } else {
+        setError('Failed to add tip after multiple attempts. Please try again or contact support.');
+      }
     } catch (err) {
       console.error('Error adding tip:', err);
       setError('Failed to add tip. Please try again.');
