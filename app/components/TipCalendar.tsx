@@ -5,6 +5,7 @@ import { useAuth } from '../lib/AuthContext';
 import { getTips, Tip } from '../lib/supabase';
 import { formatDate, formatCurrency } from '../lib/dateUtils';
 import PastTipForm from './PastTipForm';
+import { supabase } from '../lib/supabase';
 
 interface TipCalendarProps {
   selectedDate?: Date;
@@ -18,6 +19,11 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to trigger refreshes
+  const [quickEditDate, setQuickEditDate] = useState<string | null>(null);
+  const [quickEditAmount, setQuickEditAmount] = useState<string>('');
+  const [savingQuickEdit, setSavingQuickEdit] = useState(false);
+  const [quickEditSuccess, setQuickEditSuccess] = useState<string | null>(null);
+  const [quickEditError, setQuickEditError] = useState<string | null>(null);
   const { user } = useAuth();
 
   // If external date control is provided, use it
@@ -64,6 +70,81 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     }
   };
 
+  // Direct tip saving function
+  const saveQuickTip = async () => {
+    if (!user || !quickEditDate || !quickEditAmount) return;
+    
+    setSavingQuickEdit(true);
+    setQuickEditError(null);
+    setQuickEditSuccess(null);
+    
+    try {
+      // Convert dollars to cents
+      const amountInCents = Math.round(Number(quickEditAmount) * 100);
+      
+      if (isNaN(amountInCents) || amountInCents <= 0) {
+        setQuickEditError('Please enter a valid amount');
+        setSavingQuickEdit(false);
+        return;
+      }
+      
+      // Check if tip already exists
+      const { data: existingTip, error: fetchError } = await supabase
+        .from('tips')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', quickEditDate)
+        .maybeSingle();
+      
+      if (fetchError) {
+        console.error('Error checking for existing tip:', fetchError);
+        setQuickEditError('Failed to check for existing tip');
+        setSavingQuickEdit(false);
+        return;
+      }
+      
+      let result;
+      
+      if (existingTip) {
+        // Update existing tip
+        result = await supabase
+          .from('tips')
+          .update({ amount: amountInCents })
+          .eq('id', existingTip.id);
+      } else {
+        // Insert new tip
+        result = await supabase
+          .from('tips')
+          .insert([{ 
+            user_id: user.id, 
+            date: quickEditDate, 
+            amount: amountInCents 
+          }]);
+      }
+      
+      if (result.error) {
+        console.error('Error saving tip:', result.error);
+        setQuickEditError(result.error.message || 'Failed to save tip');
+        setSavingQuickEdit(false);
+        return;
+      }
+      
+      // Success!
+      setQuickEditSuccess(`$${quickEditAmount} saved for ${formatDate(quickEditDate)}`);
+      setQuickEditAmount('');
+      setQuickEditDate(null);
+      
+      // Refresh tips
+      setRefreshTrigger(prev => prev + 1);
+      
+    } catch (err) {
+      console.error('Error in quick save tip:', err);
+      setQuickEditError('An unexpected error occurred');
+    } finally {
+      setSavingQuickEdit(false);
+    }
+  };
+
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -79,7 +160,21 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
       return;
     }
     
-    // Otherwise use internal state
+    // For quick edit mode
+    if (quickEditDate === dateString) {
+      setQuickEditDate(null);
+    } else {
+      setQuickEditDate(dateString);
+      // Pre-fill with existing tip amount if available
+      const existingTip = tips.find(tip => tip.date === dateString);
+      if (existingTip) {
+        setQuickEditAmount((existingTip.amount / 100).toString());
+      } else {
+        setQuickEditAmount('');
+      }
+    }
+    
+    // For regular form mode
     if (selectedDate === dateString) {
       setSelectedDate(null);
     } else {
@@ -135,6 +230,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
       const hasTip = dateString in tipMap;
       const isToday = new Date().toISOString().split('T')[0] === dateString;
       const isSelected = selectedDate === dateString;
+      const isQuickEdit = quickEditDate === dateString;
       const isPastOrToday = date <= new Date();
       
       calendarDays.push(
@@ -144,7 +240,9 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
             isToday ? 'bg-gray-900' : 'bg-black/20'
           } ${isSelected ? 'ring-2 ring-white' : ''} ${
             isPastOrToday ? 'cursor-pointer hover:bg-gray-800' : ''
-          } ${hasTip ? 'border-green-500 border-2' : ''}`}
+          } ${hasTip ? 'border-green-500 border-2' : ''} ${
+            isQuickEdit ? 'bg-gray-800' : ''
+          }`}
           onClick={() => isPastOrToday && handleDateClick(dateString)}
         >
           <div className="flex flex-col h-full">
@@ -154,11 +252,41 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
               </span>
             </div>
             
-            {hasTip && (
+            {hasTip && !isQuickEdit && (
               <div className="flex-grow flex items-center justify-center">
-                <span className="text-xl font-bold text-green-400 animate-pulse">
+                <span className="text-xl font-bold text-green-400">
                   {formatCurrency(tipMap[dateString])}
                 </span>
+              </div>
+            )}
+            
+            {isQuickEdit && (
+              <div className="mt-1 flex flex-col space-y-1">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-1 flex items-center pointer-events-none">
+                    <span className="text-gray-400">$</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={quickEditAmount}
+                    onChange={(e) => setQuickEditAmount(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded py-1 pl-5 pr-2"
+                    placeholder="0"
+                    min="0"
+                    step="1"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveQuickTip();
+                  }}
+                  disabled={savingQuickEdit}
+                  className="bg-green-600 hover:bg-green-700 text-white text-xs py-1 px-2 rounded"
+                >
+                  {savingQuickEdit ? 'Saving...' : 'Save'}
+                </button>
               </div>
             )}
           </div>
@@ -195,6 +323,19 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
             <p className="text-gray-400 text-sm">Monthly Total</p>
             <p className="text-2xl font-bold text-green-400">{formatCurrency(monthlyTotal)}</p>
           </div>
+          
+          {/* Quick edit feedback messages */}
+          {quickEditSuccess && (
+            <div className="mb-4 p-2 bg-green-900/30 border border-green-500/30 rounded text-sm text-green-400 text-center">
+              {quickEditSuccess}
+            </div>
+          )}
+          
+          {quickEditError && (
+            <div className="mb-4 p-2 bg-red-900/30 border border-red-500/30 rounded text-sm text-red-400 text-center">
+              {quickEditError}
+            </div>
+          )}
           
           <div className="grid grid-cols-7 gap-1">
             {dayNames.map(day => (
