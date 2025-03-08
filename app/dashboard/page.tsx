@@ -172,19 +172,28 @@ export default function Dashboard() {
         </div>
 
         {isPaid && (
-          <div className="mb-8 p-4 border border-yellow-500 rounded-lg bg-gradient-to-r from-gray-900 to-black shadow-lg">
+          <div className="mb-8 bg-gradient-to-r from-yellow-900/50 to-yellow-800/50 border-2 border-yellow-500 rounded-lg p-6 shadow-xl">
             <div className="flex flex-col md:flex-row items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold mb-2 text-yellow-400">Premium Dashboard Available</h3>
-                <p className="text-gray-300 mb-4 md:mb-0">
-                  Access your exclusive premium features, AI assistant, and advanced analytics.
+              <div className="mb-4 md:mb-0">
+                <h3 className="text-2xl font-bold mb-2 text-yellow-400">Premium Dashboard Available!</h3>
+                <p className="text-gray-300 mb-2">
+                  Your premium features are ready to use. Access your exclusive AI assistant, advanced analytics, and more.
                 </p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <span className="bg-black/30 text-yellow-400 text-xs px-2 py-1 rounded-full border border-yellow-500">AI Chat Assistant</span>
+                  <span className="bg-black/30 text-yellow-400 text-xs px-2 py-1 rounded-full border border-yellow-500">Interactive Charts</span>
+                  <span className="bg-black/30 text-yellow-400 text-xs px-2 py-1 rounded-full border border-yellow-500">Earnings Projections</span>
+                  <span className="bg-black/30 text-yellow-400 text-xs px-2 py-1 rounded-full border border-yellow-500">Optimization Tips</span>
+                </div>
               </div>
               <Link 
                 href="/premium-dashboard" 
-                className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-bold py-2 px-6 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all shadow-lg transform hover:scale-105"
+                className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-bold py-3 px-8 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all shadow-lg transform hover:scale-105 flex items-center"
               >
-                Go to Premium Dashboard
+                <span>Go to Premium Dashboard</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
               </Link>
             </div>
           </div>

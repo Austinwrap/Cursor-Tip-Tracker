@@ -31,11 +31,11 @@ export default function DevPremium() {
           throw error;
         }
         
-        setMessage('Premium features enabled! Redirecting to dashboard...');
+        setMessage('Premium features enabled! Redirecting to premium dashboard...');
         
-        // Redirect to dashboard after a short delay
+        // Redirect to premium dashboard after a short delay
         setTimeout(() => {
-          router.push('/dashboard');
+          router.push('/premium-dashboard');
         }, 1000);
       } catch (error) {
         console.error('Error enabling premium features:', error);
@@ -48,8 +48,8 @@ export default function DevPremium() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-6"></div>
-      <h1 className="text-2xl font-bold mb-4">Developer Mode</h1>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500 mb-6"></div>
+      <h1 className="text-2xl font-bold mb-4">Premium Activation</h1>
       <p className="text-center max-w-md">{message}</p>
     </div>
   );
