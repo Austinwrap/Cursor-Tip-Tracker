@@ -25,6 +25,16 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Create dummy environment variables for build
+      run: |
+        echo "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co" >> .env.local
+        echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-key" >> .env.local
+        echo "STRIPE_SECRET_KEY=dummy-key" >> .env.local
+        echo "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=dummy-key" >> .env.local
+        echo "STRIPE_MONTHLY_PRICE_ID=price_dummy" >> .env.local
+        echo "STRIPE_ANNUAL_PRICE_ID=price_dummy" >> .env.local
+        echo "NEXT_PUBLIC_URL=http://localhost:3000" >> .env.local
+
     - name: Build
       run: npm run build --if-present
       

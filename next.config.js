@@ -12,10 +12,10 @@ const nextConfig = {
   },
   // Ensure trailing slashes are consistent
   trailingSlash: false,
-  // Explicitly enable the App Router
-  experimental: {
-    appDir: true,
-  },
+  // App Router is enabled by default in Next.js 14
+  // experimental: {
+  //   appDir: true,
+  // },
 }
 
 module.exports = nextConfig 

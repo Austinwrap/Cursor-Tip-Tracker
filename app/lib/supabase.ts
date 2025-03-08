@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Use default values for build environments
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key';
 
-if (!supabaseUrl || !supabaseAnonKey) {
+// Only show warning in development
+if (process.env.NODE_ENV === 'development' && (!supabaseUrl || !supabaseAnonKey)) {
   console.warn('Supabase credentials are missing. Please check your .env.local file.');
 }
 
