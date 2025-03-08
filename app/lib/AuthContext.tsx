@@ -36,7 +36,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           const { id, email } = session.user;
-          setUser({ id, email: email || '', is_paid: false });
+          setUser({ 
+            id, 
+            email: email || '', 
+            is_paid: false, 
+            created_at: new Date().toISOString() 
+          });
           
           // Check if user is on paid tier
           const isPaidUser = await getUserSubscriptionStatus(id);
@@ -58,7 +63,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (event === 'SIGNED_IN' && session?.user) {
           const { id, email } = session.user;
-          setUser({ id, email: email || '', is_paid: false });
+          setUser({ 
+            id, 
+            email: email || '', 
+            is_paid: false, 
+            created_at: new Date().toISOString() 
+          });
           
           // Check if user exists in our users table
           const { data: existingUser } = await supabase
