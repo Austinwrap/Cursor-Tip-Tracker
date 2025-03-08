@@ -42,7 +42,9 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
       setError(null);
       
       try {
+        console.log('Fetching tips for user:', user.id);
         const tipsData = await getTips(user.id);
+        console.log('Tips fetched:', tipsData);
         setTips(tipsData);
       } catch (err) {
         console.error('Error fetching tips:', err);
@@ -355,6 +357,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
       const date = new Date(year, month, day);
       const dateString = date.toISOString().split('T')[0];
       const hasTip = dateString in tipMap;
+      const tipAmount = hasTip ? tipMap[dateString] : 0;
       const isToday = new Date().toISOString().split('T')[0] === dateString;
       const isSelected = selectedDate === dateString;
       const isQuickEdit = quickEditDate === dateString;
@@ -381,9 +384,11 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
             
             {hasTip && !isQuickEdit && (
               <div className="flex-grow flex items-center justify-center">
-                <span className="text-xl font-bold text-green-400">
-                  {formatCurrency(tipMap[dateString])}
-                </span>
+                <div className="bg-green-900/30 px-3 py-2 rounded-lg text-center">
+                  <span className="text-xl font-bold text-green-400">
+                    {formatCurrency(tipAmount)}
+                  </span>
+                </div>
               </div>
             )}
             

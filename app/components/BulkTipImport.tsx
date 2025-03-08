@@ -34,6 +34,7 @@ const BulkTipImport: React.FC = () => {
     
     // Split the input by lines
     const lines = inputText.split('\n').filter(line => line.trim());
+    console.log('Lines to parse:', lines);
     
     // Regular expressions for different date formats
     const datePatterns = [
@@ -87,6 +88,7 @@ const BulkTipImport: React.FC = () => {
     
     // Process each line
     lines.forEach(line => {
+      console.log('Processing line:', line);
       let date: Date | null = null;
       let dateString = '';
       let amount = 0;
@@ -95,6 +97,7 @@ const BulkTipImport: React.FC = () => {
       for (const pattern of datePatterns) {
         const match = line.match(pattern);
         if (match) {
+          console.log('Date match found:', match);
           if (pattern === datePatterns[0]) {
             // MM/DD/YYYY
             const month = parseInt(match[1]) - 1;
@@ -159,12 +162,14 @@ const BulkTipImport: React.FC = () => {
       // Try to extract an amount
       const moneyMatch = line.match(moneyPattern);
       if (moneyMatch) {
+        console.log('Money match found:', moneyMatch);
         amount = parseFloat(moneyMatch[1]);
       }
       
       // If we found both a date and an amount, add to results
       if (date && !isNaN(date.getTime()) && amount > 0) {
         dateString = date.toISOString().split('T')[0];
+        console.log('Valid tip found:', { date: dateString, amount });
         
         // Check if the date is in the future
         if (date > currentDate) {
@@ -189,6 +194,7 @@ const BulkTipImport: React.FC = () => {
       return;
     }
     
+    console.log('Parsed tips:', parsedResults);
     setParsedTips(parsedResults);
   };
 
@@ -405,6 +411,11 @@ const BulkTipImport: React.FC = () => {
     
     if (successCount > 0) {
       setImportSuccess(`Successfully imported ${successCount} tips!`);
+      
+      // Clear the input text on success
+      if (successCount === parsedTips.length) {
+        setInputText('');
+      }
     }
   };
 
