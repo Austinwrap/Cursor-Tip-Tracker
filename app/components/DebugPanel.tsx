@@ -110,21 +110,34 @@ const DebugPanel: React.FC = () => {
         return;
       }
       
-      // Create user record
-      const { data, error } = await supabase
-        .from('users')
-        .insert([{
-          id: user.id,
-          email: user.email,
-          is_paid: false
-        }])
-        .select();
+      // Try to use the RPC function first
+      const { error: rpcError } = await supabase.rpc('create_user_record', {
+        p_user_id: user.id,
+        p_email: user.email,
+        p_is_paid: false
+      });
       
-      if (error) {
-        throw new Error(`Error creating user record: ${error.message}`);
+      if (rpcError) {
+        addLog(`RPC function failed: ${rpcError.message}`);
+        
+        // Fallback: Try direct insert
+        const { data, error } = await supabase
+          .from('users')
+          .insert([{
+            id: user.id,
+            email: user.email,
+            is_paid: false
+          }])
+          .select();
+        
+        if (error) {
+          throw new Error(`Error creating user record: ${error.message}`);
+        }
+        
+        addLog(`User record created successfully via direct insert: ${JSON.stringify(data)}`);
+      } else {
+        addLog('User record created successfully via RPC function');
       }
-      
-      addLog(`User record created successfully: ${JSON.stringify(data)}`);
       
       // Refresh database info
       await checkDatabase();
@@ -162,21 +175,36 @@ const DebugPanel: React.FC = () => {
       yesterday.setDate(yesterday.getDate() - 1);
       const testDate = yesterday.toISOString().split('T')[0];
       
-      // Try to insert a test tip directly
-      const { data, error } = await supabase
-        .from('tips')
-        .insert([{
-          user_id: user.id,
-          date: testDate,
-          amount: 12345 // $123.45
-        }])
-        .select();
+      // Try to use the RPC function first
+      addLog('Trying to insert tip via RPC function...');
+      const { error: rpcError } = await supabase.rpc('create_tip', {
+        p_user_id: user.id,
+        p_date: testDate,
+        p_amount: 12345 // $123.45
+      });
       
-      if (error) {
-        throw new Error(`Direct tip insert error: ${error.message}`);
+      if (rpcError) {
+        addLog(`RPC function failed: ${rpcError.message}`);
+        
+        // Fallback: Try direct insert
+        addLog('Falling back to direct insert...');
+        const { data, error } = await supabase
+          .from('tips')
+          .insert([{
+            user_id: user.id,
+            date: testDate,
+            amount: 12345 // $123.45
+          }])
+          .select();
+        
+        if (error) {
+          throw new Error(`Direct tip insert error: ${error.message}`);
+        }
+        
+        addLog(`Test tip inserted successfully via direct insert: ${JSON.stringify(data)}`);
+      } else {
+        addLog('Test tip inserted successfully via RPC function');
       }
-      
-      addLog(`Test tip inserted successfully: ${JSON.stringify(data)}`);
       
       // Refresh database info
       await checkDatabase();
