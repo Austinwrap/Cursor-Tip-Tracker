@@ -25,7 +25,7 @@ const sampleResponses = [
 ];
 
 const AIChatAssistant: React.FC = () => {
-  const { user, isPaid } = useAuth();
+  const { user, isPaid, devMode } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -51,7 +51,7 @@ const AIChatAssistant: React.FC = () => {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading || !user) return;
     
     // Add user message
     const userMessage: Message = {
@@ -66,49 +66,29 @@ const AIChatAssistant: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // In development, use sample responses instead of API call
-      if (process.env.NODE_ENV === 'development') {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Get random response from sample responses
-        const randomResponse = sampleResponses[Math.floor(Math.random() * sampleResponses.length)];
-        
-        // Add AI response
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: randomResponse,
-          sender: 'ai',
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, aiMessage]);
-      } else {
-        // Call the AI API in production
-        const response = await fetch('/api/ai/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: userMessage.text,
-            userId: user?.id,
-            isPaid,
-          }),
-        });
-        
-        const data = await response.json();
-        
-        // Add AI response
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: data.response || 'Sorry, I encountered an error. Please try again.',
-          sender: 'ai',
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, aiMessage]);
-      }
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.text,
+          userId: user.id,
+          devMode: devMode
+        }),
+      });
+      
+      const data = await response.json();
+      
+      // Add AI response
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: data.response || 'Sorry, I encountered an error. Please try again.',
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
       

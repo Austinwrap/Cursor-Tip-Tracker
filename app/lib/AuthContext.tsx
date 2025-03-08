@@ -11,6 +11,8 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<{ error: any; success: boolean }>;
   signUp: (email: string, password: string) => Promise<{ error: any; success: boolean }>;
   signOut: () => Promise<void>;
+  devMode: boolean;
+  toggleDevMode: () => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,12 +22,15 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => ({ error: null, success: false }),
   signUp: async () => ({ error: null, success: false }),
   signOut: async () => {},
+  devMode: false,
+  toggleDevMode: () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isPaid, setIsPaid] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [devMode, setDevMode] = useState<boolean>(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -166,8 +171,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const toggleDevMode = () => {
+    const newDevMode = !devMode;
+    setDevMode(newDevMode);
+    console.log(`Development mode ${newDevMode ? 'enabled' : 'disabled'}`);
+    if (newDevMode) {
+      setIsPaid(true);
+    } else {
+      if (user) {
+        getUserSubscriptionStatus(user.id).then(status => {
+          setIsPaid(status);
+        });
+      } else {
+        setIsPaid(false);
+      }
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isPaid, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isPaid: isPaid || devMode,
+        loading,
+        signIn,
+        signUp,
+        signOut,
+        devMode,
+        toggleDevMode,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

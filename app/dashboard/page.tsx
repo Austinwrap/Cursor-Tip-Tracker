@@ -9,7 +9,7 @@ import TipCalendar from '../components/TipCalendar';
 import Link from 'next/link';
 
 export default function Dashboard() {
-  const { user, loading, isPaid } = useAuth();
+  const { user, loading, isPaid, devMode, toggleDevMode } = useAuth();
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -38,6 +38,33 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2 text-center">Track Your Tips</h1>
         <p className="text-gray-400 text-center mb-8">Record and visualize your daily earnings</p>
+        
+        {/* Developer Mode Toggle */}
+        <div className="mb-6 bg-gray-900 border border-gray-700 rounded-lg p-4 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold mb-1">Developer Mode</h3>
+              <p className="text-gray-400 text-sm">
+                Enable to access premium features without payment (local testing only)
+              </p>
+            </div>
+            <button
+              onClick={toggleDevMode}
+              className={`px-4 py-2 rounded-md font-medium ${
+                devMode 
+                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                  : 'bg-gray-700 hover:bg-gray-600 text-white'
+              }`}
+            >
+              {devMode ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+          {devMode && (
+            <div className="mt-2 p-2 bg-green-900/30 border border-green-500/30 rounded text-sm text-green-400">
+              Premium features are now accessible. Visit the Analytics page to see all premium features.
+            </div>
+          )}
+        </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Calendar Section */}

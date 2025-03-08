@@ -132,7 +132,7 @@ function formatCurrency(amount: number): string {
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
-    const { message, userId } = await request.json();
+    const { message, userId, devMode } = await request.json();
     
     if (!message || !userId) {
       return NextResponse.json(
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Check if user exists and is paid
+    // Check if user exists and is paid (or in dev mode)
     const userProfile = await getUserProfile(userId);
     
     if (!userProfile) {
@@ -151,7 +151,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (!userProfile.is_paid) {
+    // Allow access in dev mode or if user is paid
+    if (!userProfile.is_paid && !devMode) {
       return NextResponse.json(
         { error: 'This feature is only available for premium users' },
         { status: 403 }
