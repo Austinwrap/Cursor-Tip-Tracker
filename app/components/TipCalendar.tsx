@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { getTips, Tip } from '../lib/supabase';
 import { formatDate, formatCurrency } from '../lib/dateUtils';
@@ -25,22 +25,46 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
   const [quickEditSuccess, setQuickEditSuccess] = useState<string | null>(null);
   const [quickEditError, setQuickEditError] = useState<string | null>(null);
   const [showLedger, setShowLedger] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
   const { user } = useAuth();
+  
+  // Ref to track if component is mounted
+  const isMounted = useRef(true);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // Memoized fetchTips function to avoid recreation on each render
-  const fetchTips = useCallback(async () => {
+  const fetchTips = useCallback(async (forceRefresh = false) => {
     if (!user) return;
     
+    // Don't refresh too frequently unless forced
+    const now = Date.now();
+    if (!forceRefresh && now - lastRefreshTime < 1000) {
+      return;
+    }
+    
+    setLastRefreshTime(now);
     setLoading(true);
     setError(null);
     
     try {
       console.log('Fetching tips for user:', user.id);
       const tipsData = await getTips(user.id);
-      console.log('Tips fetched:', tipsData);
+      console.log('Tips fetched:', tipsData.length, 'tips');
+      
+      if (tipsData.length > 0) {
+        console.log('Sample tip:', tipsData[0]);
+      }
       
       // Force a re-render by creating a new array
-      setTips([...tipsData]);
+      if (isMounted.current) {
+        setTips([...tipsData]);
+      }
       
       // Debug: Log the tips that should be displayed
       const year = currentMonth.getFullYear();
@@ -54,15 +78,19 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
         tip.date >= monthStart && tip.date <= monthEnd
       );
       
-      console.log('Tips for current month:', currentMonthTips);
+      console.log('Tips for current month:', currentMonthTips.length);
       console.log('Monthly total:', calculateMonthlyTotal(tipsData));
     } catch (err) {
       console.error('Error fetching tips:', err);
-      setError('Failed to load history');
+      if (isMounted.current) {
+        setError('Failed to load tip history');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-  }, [user, currentMonth]);
+  }, [user, currentMonth, lastRefreshTime]);
 
   // Helper function to calculate monthly total
   const calculateMonthlyTotal = (tipsData = tips) => {
@@ -91,13 +119,15 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
 
   // Fetch tips when component mounts or refreshTrigger changes
   useEffect(() => {
-    fetchTips();
+    fetchTips(true);
   }, [fetchTips, refreshTrigger]);
 
   // Set up real-time subscription to tips table
   useEffect(() => {
     if (!user) return;
 
+    console.log('Setting up real-time subscription for tips table');
+    
     // Subscribe to changes in the tips table for this user
     const subscription = supabase
       .channel('tips-changes')
@@ -112,13 +142,16 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
         (payload) => {
           console.log('Real-time update received:', payload);
           // Refresh tips when any change is detected
-          fetchTips();
+          fetchTips(true);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     // Clean up subscription on unmount
     return () => {
+      console.log('Cleaning up subscription');
       supabase.removeChannel(subscription);
     };
   }, [user, fetchTips]);
@@ -126,7 +159,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
   // Force refresh on mount and every 5 seconds
   useEffect(() => {
     // Initial fetch
-    fetchTips();
+    fetchTips(true);
     
     // Set up interval for periodic refreshes
     const intervalId = setInterval(() => {
@@ -149,10 +182,15 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
       setRefreshTrigger(prev => prev + 1);
       
       // Explicitly fetch tips again
-      await fetchTips();
+      await fetchTips(true);
       
       // Close the form after successful addition
       setSelectedDate(null);
+      
+      // Force another refresh after a delay to ensure the database has updated
+      setTimeout(() => {
+        fetchTips(true);
+      }, 1000);
     } catch (err) {
       console.error('Error refreshing tips:', err);
     }
@@ -189,11 +227,11 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
         setRefreshTrigger(prev => prev + 1);
         
         // Explicitly fetch tips again
-        await fetchTips();
+        await fetchTips(true);
         
         // Force a re-render
         setTimeout(() => {
-          fetchTips();
+          fetchTips(true);
         }, 1000);
       } else {
         setQuickEditError('Failed to save tip after multiple attempts. Please try again.');
@@ -470,6 +508,15 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
             </table>
           </div>
         )}
+        
+        <div className="mt-6 flex justify-center">
+          <button 
+            onClick={() => fetchTips(true)} 
+            className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+          >
+            Refresh Tip History
+          </button>
+        </div>
       </div>
     );
   };
@@ -488,7 +535,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     const tipMap: Record<string, number> = {};
     tips.forEach(tip => {
       tipMap[tip.date] = tip.amount;
-      console.log(`Tip for ${tip.date}: ${tip.amount}`);
+      console.log(`Tip for ${tip.date}: $${tip.amount/100}`);
     });
     
     // Generate calendar days
@@ -645,6 +692,16 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
             <p className="text-gray-400 text-sm">Click on a date to add or edit a tip</p>
           </div>
           
+          {/* Manual refresh button */}
+          <div className="mt-4 flex justify-center">
+            <button 
+              onClick={() => fetchTips(true)} 
+              className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+            >
+              Refresh Calendar
+            </button>
+          </div>
+          
           {/* Debug info - only visible in development */}
           {process.env.NODE_ENV === 'development' && (
             <div className="mt-4 p-2 bg-gray-900 rounded text-xs text-gray-400">
@@ -653,7 +710,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
               <p>Current month: {monthNames[month]} {year}</p>
               <p>Monthly total: {formatCurrency(monthlyTotal)}</p>
               <button 
-                onClick={() => fetchTips()} 
+                onClick={() => fetchTips(true)} 
                 className="mt-1 bg-gray-800 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs"
               >
                 Refresh Tips

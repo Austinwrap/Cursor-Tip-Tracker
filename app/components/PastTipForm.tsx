@@ -38,6 +38,7 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
     setCheckingTip(true);
     
     try {
+      console.log('Checking for existing tip on date:', dateToCheck);
       const { data, error } = await supabase
         .from('tips')
         .select('*')
@@ -51,11 +52,13 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
       }
       
       if (data) {
+        console.log('Found existing tip:', data);
         // Convert cents to dollars for display
         const amountInDollars = (data.amount / 100).toString();
         setAmount(amountInDollars);
         setExistingTip(data.amount);
       } else {
+        console.log('No existing tip found for date:', dateToCheck);
         setAmount('');
         setExistingTip(null);
       }
@@ -258,6 +261,8 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
     setSuccess(null);
     
     try {
+      console.log('Submitting tip form with amount:', amount, 'for date:', date);
+      
       // Convert dollars to cents for storage
       const amountInCents = Math.round(Number(amount) * 100);
       
@@ -269,10 +274,22 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
         setSuccess(`$${amount} ${action} for ${formatDate(date)}`);
         setExistingTip(amountInCents);
         
-        // Manually trigger a refresh of the tips data
+        console.log('Tip saved successfully, calling onTipAdded callback');
+        
+        // Call the callback immediately
+        onTipAdded();
+        
+        // Also call it after a delay to ensure the database has updated
         setTimeout(() => {
+          console.log('Calling delayed onTipAdded callback');
           onTipAdded();
-        }, 500); // Small delay to ensure the database has time to update
+        }, 500);
+        
+        // And call it one more time after a longer delay
+        setTimeout(() => {
+          console.log('Calling final onTipAdded callback');
+          onTipAdded();
+        }, 1500);
       } else {
         setError('Failed to add tip after multiple attempts. Please try again or contact support.');
       }
