@@ -8,7 +8,7 @@ try {
   if (process.env.STRIPE_SECRET_KEY) {
     // Initialize with API version to ensure compatibility
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16', // Use a specific API version for stability
+      apiVersion: '2025-02-24.acacia', // Latest API version for compatibility
     });
     console.log('Stripe initialized successfully');
   } else {
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     
     // In development mode or if Stripe is not configured, directly update the user's subscription status
     if (!stripe || process.env.NODE_ENV === 'development' || !process.env.STRIPE_SECRET_KEY || 
-        process.env.STRIPE_SECRET_KEY.includes('your_key_here')) {
+        process.env.STRIPE_SECRET_KEY.includes('placeholder')) {
       console.log('Development mode or Stripe not configured: Enabling premium without Stripe payment');
       
       // Update the user's is_paid status in the database
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       : process.env.STRIPE_ANNUAL_PRICE_ID;
     
     // Use dummy price IDs if real ones aren't available
-    if (!priceId || priceId.includes('price_id_here')) {
+    if (!priceId || priceId.includes('placeholder')) {
       console.warn('Price ID not configured, using dummy price ID');
       priceId = plan === 'monthly' ? DUMMY_MONTHLY_PRICE_ID : DUMMY_ANNUAL_PRICE_ID;
     }
