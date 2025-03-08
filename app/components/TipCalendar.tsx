@@ -37,7 +37,25 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
       console.log('Fetching tips for user:', user.id);
       const tipsData = await getTips(user.id);
       console.log('Tips fetched:', tipsData);
-      setTips(tipsData);
+      
+      // Force a re-render by creating a new array
+      setTips([...tipsData]);
+      
+      // Debug: Log the tips that should be displayed
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const monthStart = new Date(year, month, 1).toISOString().split('T')[0];
+      const monthEnd = new Date(year, month + 1, 0).toISOString().split('T')[0];
+      
+      console.log('Current month range:', monthStart, 'to', monthEnd);
+      
+      const currentMonthTips = tipsData.filter(tip => 
+        tip.date >= monthStart && tip.date <= monthEnd
+      );
+      
+      console.log('Tips for current month:', currentMonthTips);
+      console.log('Monthly total:', calculateMonthlyTotal(tipsData));
     } catch (err) {
       console.error('Error fetching tips:', err);
       setError('Failed to load history');
@@ -45,6 +63,23 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
       setLoading(false);
     }
   }, [user]);
+
+  // Helper function to calculate monthly total
+  const calculateMonthlyTotal = (tipsData = tips) => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const monthStart = new Date(year, month, 1).toISOString().split('T')[0];
+    const monthEnd = new Date(year, month + 1, 0).toISOString().split('T')[0];
+    
+    let total = 0;
+    tipsData.forEach(tip => {
+      if (tip.date >= monthStart && tip.date <= monthEnd) {
+        total += tip.amount;
+      }
+    });
+    
+    return total;
+  };
 
   // If external date control is provided, use it
   useEffect(() => {
@@ -88,11 +123,28 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     };
   }, [user, fetchTips]);
 
+  // Force refresh on mount and every 5 seconds
+  useEffect(() => {
+    // Initial fetch
+    fetchTips();
+    
+    // Set up interval for periodic refreshes
+    const intervalId = setInterval(() => {
+      console.log('Periodic refresh triggered');
+      fetchTips();
+    }, 5000); // Refresh every 5 seconds
+    
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
+  }, [fetchTips]);
+
   const handleTipAdded = async () => {
     // Refresh tips after a new one is added
     if (!user) return;
     
     try {
+      console.log('Tip added, refreshing data...');
+      
       // Increment refresh trigger to force a refresh
       setRefreshTrigger(prev => prev + 1);
       
@@ -138,6 +190,11 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
         
         // Explicitly fetch tips again
         await fetchTips();
+        
+        // Force a re-render
+        setTimeout(() => {
+          fetchTips();
+        }, 1000);
       } else {
         setQuickEditError('Failed to save tip after multiple attempts. Please try again.');
       }
@@ -348,23 +405,6 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     }
   };
 
-  // Calculate total tips for the current month
-  const calculateMonthlyTotal = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const monthStart = new Date(year, month, 1).toISOString().split('T')[0];
-    const monthEnd = new Date(year, month + 1, 0).toISOString().split('T')[0];
-    
-    let total = 0;
-    tips.forEach(tip => {
-      if (tip.date >= monthStart && tip.date <= monthEnd) {
-        total += tip.amount;
-      }
-    });
-    
-    return total;
-  };
-
   const renderCalendar = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -379,6 +419,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     const tipMap: Record<string, number> = {};
     tips.forEach(tip => {
       tipMap[tip.date] = tip.amount;
+      console.log(`Tip for ${tip.date}: ${tip.amount}`);
     });
     
     // Generate calendar days
@@ -395,6 +436,12 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
       const dateString = date.toISOString().split('T')[0];
       const hasTip = dateString in tipMap;
       const tipAmount = hasTip ? tipMap[dateString] : 0;
+      
+      // Debug log for this specific day
+      if (hasTip) {
+        console.log(`Rendering tip for ${dateString}: $${tipAmount/100}`);
+      }
+      
       const isToday = new Date().toISOString().split('T')[0] === dateString;
       const isSelected = selectedDate === dateString;
       const isQuickEdit = quickEditDate === dateString;
@@ -518,6 +565,22 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
           <div className="mt-4 text-center">
             <p className="text-gray-400 text-sm">Click on a date to add or edit a tip</p>
           </div>
+          
+          {/* Debug info - only visible in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 p-2 bg-gray-900 rounded text-xs text-gray-400">
+              <p>Debug Info:</p>
+              <p>Tips count: {tips.length}</p>
+              <p>Current month: {monthNames[month]} {year}</p>
+              <p>Monthly total: {formatCurrency(monthlyTotal)}</p>
+              <button 
+                onClick={() => fetchTips()} 
+                className="mt-1 bg-gray-800 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs"
+              >
+                Refresh Tips
+              </button>
+            </div>
+          )}
         </div>
         
         {selectedDate && (
