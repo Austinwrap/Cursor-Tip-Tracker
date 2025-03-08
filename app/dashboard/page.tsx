@@ -216,19 +216,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-
-      {process.env.NODE_ENV === 'development' && !isPaid && (
-        <div className="mt-8 p-4 border border-yellow-500 rounded-lg bg-black/50 max-w-md mx-auto">
-          <h3 className="text-lg font-bold mb-2 text-yellow-400">Developer Mode</h3>
-          <p className="mb-4 text-sm">Need to test premium features? Enable them instantly:</p>
-          <Link 
-            href="/dev-premium" 
-            className="block w-full bg-yellow-500 text-black text-center font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors"
-          >
-            Enable Premium Features
-          </Link>
-        </div>
-      )}
     </main>
   );
 } 

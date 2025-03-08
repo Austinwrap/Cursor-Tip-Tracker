@@ -19,39 +19,6 @@ export default function Upgrade() {
     }
   }, [user, authLoading, router]);
 
-  // Function to enable premium features in development mode
-  const enablePremiumForDev = async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
-    setMessage('Enabling premium features for development...');
-    
-    try {
-      // Update the user's is_paid status in the database
-      const { error } = await supabase
-        .from('users')
-        .update({ is_paid: true })
-        .eq('id', user.id);
-        
-      if (error) {
-        throw error;
-      }
-      
-      // Show success message
-      setMessage('Premium features enabled! Redirecting to dashboard...');
-      
-      // Redirect to dashboard after a short delay instead of refreshing
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1500);
-    } catch (error) {
-      console.error('Error enabling premium features:', error);
-      setMessage('Error enabling premium features. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (authLoading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -403,22 +370,6 @@ export default function Upgrade() {
             Questions? Contact us at <a href="mailto:support@cursortiptracker.com" className="text-blue-400 hover:underline">support@cursortiptracker.com</a>
           </p>
         </div>
-        
-        {/* Development mode button - only shown in development */}
-        {process.env.NODE_ENV === 'development' && !isPaid && (
-          <div className="mt-12 p-6 border border-yellow-500 rounded-lg bg-black/50 max-w-md mx-auto">
-            <h3 className="text-xl font-bold mb-4 text-yellow-400">Development Mode</h3>
-            <p className="mb-4">Enable premium features without payment for testing purposes.</p>
-            <button
-              onClick={enablePremiumForDev}
-              disabled={isLoading}
-              className="w-full bg-yellow-500 text-black font-bold py-3 px-6 rounded-lg hover:bg-yellow-400 transition-colors disabled:opacity-50"
-            >
-              {isLoading ? 'Processing...' : 'Enable Premium Features'}
-            </button>
-            {message && <p className="mt-4 text-center text-sm">{message}</p>}
-          </div>
-        )}
       </div>
       
       <style jsx>{`
