@@ -1,0 +1,119 @@
+.statsContainer {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.statsTitle {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #2d3748;
+  text-align: center;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.statCard {
+  background-color: #f7fafc;
+  border-radius: 6px;
+  padding: 15px;
+  text-align: center;
+}
+
+.statCard h3 {
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin-bottom: 8px;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #38a169;
+  margin: 0;
+}
+
+.statSubtext {
+  font-size: 0.8rem;
+  color: #718096;
+  margin-top: 5px;
+}
+
+.monthComparison {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.monthCard {
+  flex: 1;
+  background-color: #f7fafc;
+  border-radius: 6px;
+  padding: 15px;
+  text-align: center;
+}
+
+.monthCard h3 {
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin-bottom: 8px;
+}
+
+.monthValue {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #3182ce;
+  margin: 0;
+}
+
+.freemiumNotice {
+  text-align: center;
+  padding: 10px;
+  background-color: #ebf8ff;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.freemiumNotice a {
+  color: #3182ce;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.emptyStats {
+  text-align: center;
+  padding: 30px;
+  background-color: #f7fafc;
+  border-radius: 8px;
+  color: #718096;
+}
+
+@media (max-width: 480px) {
+  .statsContainer {
+    padding: 15px;
+  }
+  
+  .statsGrid {
+    gap: 10px;
+  }
+  
+  .statCard, .monthCard {
+    padding: 10px;
+  }
+  
+  .statValue {
+    font-size: 1.3rem;
+  }
+  
+  .monthValue {
+    font-size: 1.1rem;
+  }
+} 
