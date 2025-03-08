@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { addTip } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { getCurrentDate, formatDate } from '../lib/dateUtils';
 
 interface TipFormProps {
@@ -24,16 +24,65 @@ const TipForm: React.FC<TipFormProps> = ({ onTipAdded, selectedDate }) => {
   
   const formattedDate = formatDate(dateToUse);
 
+  // Direct Supabase implementation to save tips
+  const saveTip = async (userId: string, date: string, amountInCents: number) => {
+    try {
+      // First check if a tip already exists for this date
+      const { data: existingTip, error: fetchError } = await supabase
+        .from('tips')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('date', date)
+        .maybeSingle();
+      
+      if (fetchError) {
+        console.error('Error checking for existing tip:', fetchError);
+        throw new Error('Failed to check for existing tip');
+      }
+      
+      let result;
+      
+      if (existingTip) {
+        // Update existing tip
+        result = await supabase
+          .from('tips')
+          .update({ amount: amountInCents })
+          .eq('id', existingTip.id)
+          .select();
+      } else {
+        // Insert new tip
+        result = await supabase
+          .from('tips')
+          .insert([{ 
+            user_id: userId, 
+            date: date, 
+            amount: amountInCents 
+          }])
+          .select();
+      }
+      
+      if (result.error) {
+        console.error('Error saving tip:', result.error);
+        throw new Error(result.error.message || 'Failed to save tip');
+      }
+      
+      return result.data;
+    } catch (err) {
+      console.error('Error in saveTip function:', err);
+      throw err;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
-      setError('Please sign in');
+      setError('Please sign in to add tips');
       return;
     }
     
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      setError('Enter valid amount');
+      setError('Please enter a valid amount');
       return;
     }
     
@@ -45,18 +94,15 @@ const TipForm: React.FC<TipFormProps> = ({ onTipAdded, selectedDate }) => {
       // Convert dollars to cents for storage
       const amountInCents = Math.round(Number(amount) * 100);
       
-      const result = await addTip(user.id, dateToUse, amountInCents);
+      // Save tip directly using Supabase
+      await saveTip(user.id, dateToUse, amountInCents);
       
-      if (result) {
-        setSuccess(`$${amount} added`);
-        setAmount('');
-        onTipAdded();
-      } else {
-        setError('Failed to add tip');
-      }
+      setSuccess(`$${amount} added for ${formattedDate}`);
+      setAmount('');
+      onTipAdded(); // Notify parent component
     } catch (err) {
       console.error('Error adding tip:', err);
-      setError('Error occurred');
+      setError('Failed to add tip. Please try again.');
     } finally {
       setLoading(false);
     }

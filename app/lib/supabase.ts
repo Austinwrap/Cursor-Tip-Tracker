@@ -1,247 +1,186 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Use default values for build environments
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key';
-
-// Only show warning in development
-if (process.env.NODE_ENV === 'development' && (!supabaseUrl || !supabaseAnonKey)) {
-  console.warn('Supabase credentials are missing. Please check your .env.local file.');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Types for our database tables
+// Define the types for our database tables
 export type User = {
   id: string;
   email: string;
   is_paid: boolean;
+  created_at: string;
 };
 
 export type Tip = {
-  id: string;
+  id: number;
   user_id: string;
   date: string;
-  amount: number; // Stored in cents
+  amount: number;
+  created_at: string;
 };
 
-// Helper functions for database operations
-export async function getTips(userId: string): Promise<Tip[]> {
-  const { data, error } = await supabase
-    .from('tips')
-    .select('*')
-    .eq('user_id', userId)
-    .order('date', { ascending: false });
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-  if (error) {
-    console.error('Error fetching tips:', error);
-    return [];
-  }
-
-  return data || [];
+// Check if credentials are available
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    'Missing Supabase credentials. Make sure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your .env.local file.'
+  );
 }
 
-export async function getTipByDate(userId: string, date: string): Promise<Tip | null> {
-  const { data, error } = await supabase
-    .from('tips')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .single();
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-  if (error) {
-    if (error.code !== 'PGRST116') { // PGRST116 is the error code for "no rows returned"
-      console.error('Error fetching tip by date:', error);
+// User functions
+export const getUserProfile = async (userId: string): Promise<User | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
     }
+
+    return data as User;
+  } catch (err) {
+    console.error('Unexpected error in getUserProfile:', err);
     return null;
   }
+};
 
-  return data;
-}
-
-export async function addTip(userId: string, date: string, amount: number): Promise<Tip | null> {
+export const updateUserPaidStatus = async (userId: string, isPaid: boolean): Promise<boolean> => {
   try {
-    // Check if a tip already exists for this date
-    const existingTip = await getTipByDate(userId, date);
+    const { error } = await supabase
+      .from('users')
+      .update({ is_paid: isPaid })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Error updating user paid status:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Unexpected error in updateUserPaidStatus:', err);
+    return false;
+  }
+};
+
+// Tip functions
+export const addTip = async (userId: string, date: string, amount: number): Promise<boolean> => {
+  try {
+    // First check if a tip already exists for this date
+    const { data: existingTip, error: fetchError } = await supabase
+      .from('tips')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .maybeSingle();
+    
+    if (fetchError) {
+      console.error('Error checking for existing tip:', fetchError);
+      return false;
+    }
+    
+    let result;
     
     if (existingTip) {
       // Update existing tip
-      const { data, error } = await supabase
+      result = await supabase
         .from('tips')
         .update({ amount })
-        .eq('id', existingTip.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error updating tip:', error);
-        return null;
-      }
-
-      return data;
+        .eq('id', existingTip.id);
     } else {
-      // Create new tip with explicit fields
-      const newTip = {
-        user_id: userId,
-        date: date,
-        amount: amount
-      };
-      
-      const { data, error } = await supabase
+      // Insert new tip
+      result = await supabase
         .from('tips')
-        .insert([newTip])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding tip:', error);
-        return null;
-      }
-
-      return data;
+        .insert([{ 
+          user_id: userId, 
+          date, 
+          amount 
+        }]);
     }
-  } catch (error) {
-    console.error('Unexpected error in addTip:', error);
-    return null;
-  }
-}
-
-export async function getUserSubscriptionStatus(userId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('users')
-    .select('is_paid')
-    .eq('id', userId)
-    .single();
-
-  if (error) {
-    console.error('Error fetching user subscription status:', error);
+    
+    if (result.error) {
+      console.error('Error saving tip:', result.error);
+      return false;
+    }
+    
+    return true;
+  } catch (err) {
+    console.error('Unexpected error in addTip:', err);
     return false;
   }
+};
 
-  return data?.is_paid || false;
-}
+export const getTips = async (userId: string): Promise<Tip[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('tips')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
 
-// Analytics functions (for paid tier)
-export async function getMonthlyTotals(userId: string, year: number): Promise<Record<string, number>> {
-  const { data, error } = await supabase
-    .from('tips')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('date', `${year}-01-01`)
-    .lte('date', `${year}-12-31`);
-
-  if (error) {
-    console.error('Error fetching monthly totals:', error);
-    return {};
-  }
-
-  const monthlyTotals: Record<string, number> = {};
-  
-  // Initialize all months with 0
-  for (let i = 1; i <= 12; i++) {
-    const monthKey = i.toString().padStart(2, '0');
-    monthlyTotals[monthKey] = 0;
-  }
-
-  // Sum up tips by month
-  data?.forEach((tip) => {
-    const month = tip.date.split('-')[1]; // Extract month from YYYY-MM-DD
-    monthlyTotals[month] = (monthlyTotals[month] || 0) + tip.amount;
-  });
-
-  return monthlyTotals;
-}
-
-export async function getDailyAverages(userId: string): Promise<Record<string, number>> {
-  const { data, error } = await supabase
-    .from('tips')
-    .select('*')
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('Error fetching daily averages:', error);
-    return {};
-  }
-
-  const dayTotals: Record<string, { sum: number; count: number }> = {
-    '0': { sum: 0, count: 0 }, // Sunday
-    '1': { sum: 0, count: 0 }, // Monday
-    '2': { sum: 0, count: 0 }, // Tuesday
-    '3': { sum: 0, count: 0 }, // Wednesday
-    '4': { sum: 0, count: 0 }, // Thursday
-    '5': { sum: 0, count: 0 }, // Friday
-    '6': { sum: 0, count: 0 }, // Saturday
-  };
-
-  // Sum up tips by day of week
-  data?.forEach((tip) => {
-    const date = new Date(tip.date);
-    const dayOfWeek = date.getDay().toString();
-    dayTotals[dayOfWeek].sum += tip.amount;
-    dayTotals[dayOfWeek].count += 1;
-  });
-
-  // Calculate averages
-  const dayAverages: Record<string, number> = {};
-  Object.entries(dayTotals).forEach(([day, { sum, count }]) => {
-    dayAverages[day] = count > 0 ? sum / count : 0;
-  });
-
-  return dayAverages;
-}
-
-export async function getBestAndWorstDays(userId: string): Promise<{ best: Tip | null; worst: Tip | null }> {
-  const { data, error } = await supabase
-    .from('tips')
-    .select('*')
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('Error fetching best and worst days:', error);
-    return { best: null, worst: null };
-  }
-
-  if (!data || data.length === 0) {
-    return { best: null, worst: null };
-  }
-
-  // Find best and worst days
-  let best = data[0];
-  let worst = data[0];
-
-  data.forEach((tip) => {
-    if (tip.amount > best.amount) {
-      best = tip;
+    if (error) {
+      console.error('Error fetching tips:', error);
+      return [];
     }
-    if (tip.amount < worst.amount) {
-      worst = tip;
+
+    return data as Tip[];
+  } catch (err) {
+    console.error('Unexpected error in getTips:', err);
+    return [];
+  }
+};
+
+export const getTipsByDateRange = async (
+  userId: string,
+  startDate: string,
+  endDate: string
+): Promise<Tip[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('tips')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching tips by date range:', error);
+      return [];
     }
-  });
 
-  return { best, worst };
-}
-
-export async function getProjectedEarnings(userId: string, days: number): Promise<number> {
-  const { data, error } = await supabase
-    .from('tips')
-    .select('*')
-    .eq('user_id', userId)
-    .order('date', { ascending: false })
-    .limit(30); // Use last 30 days for projection
-
-  if (error) {
-    console.error('Error fetching tips for projection:', error);
-    return 0;
+    return data as Tip[];
+  } catch (err) {
+    console.error('Unexpected error in getTipsByDateRange:', err);
+    return [];
   }
+};
 
-  if (!data || data.length === 0) {
-    return 0;
+export const deleteTip = async (tipId: number, userId: string): Promise<boolean> => {
+  try {
+    // Verify the tip belongs to the user before deleting
+    const { error } = await supabase
+      .from('tips')
+      .delete()
+      .eq('id', tipId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error deleting tip:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Unexpected error in deleteTip:', err);
+    return false;
   }
+};
 
-  // Calculate average daily tips
-  const totalAmount = data.reduce((sum, tip) => sum + tip.amount, 0);
-  const avgDailyTips = totalAmount / data.length;
-
-  // Project earnings for specified number of days
-  return Math.round(avgDailyTips * days);
-} 
+export default supabase; 
