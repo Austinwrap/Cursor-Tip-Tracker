@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import styles from './TipEntryModal.module.css';
 import { supabase } from '../lib/supabaseClient';
@@ -7,6 +9,7 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
   const [note, setNote] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   
   if (!isOpen) return null;
   
@@ -27,10 +30,11 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
     
     setIsLoading(true);
     setError('');
+    setSuccess('');
     
     try {
       // Save tip to Supabase
-      const { error: saveError } = await supabase
+      const { data, error: saveError } = await supabase
         .from('tips')
         .insert({
           user_id: userId,
@@ -38,30 +42,39 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
           amount: Number(amount),
           note: note || '',
           type: 'cash'
-        });
+        })
+        .select();
       
       if (saveError) throw new Error(saveError.message);
       
-      // Clear form and close modal
+      console.log('Tip saved successfully:', data);
+      setSuccess('Tip saved successfully!');
+      
+      // Clear form
       setAmount('');
       setNote('');
-      onTipSaved();
-      onClose();
+      
+      // Wait a moment to show success message before closing
+      setTimeout(() => {
+        onTipSaved();
+        onClose();
+      }, 1000);
       
     } catch (err) {
       console.error('Error saving tip:', err);
-      setError('Failed to save tip. Please try again.');
+      setError(`Failed to save tip: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
   
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalContent}>
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
         <h2 className={styles.modalTitle}>Add Tip for {formattedDate}</h2>
         
         {error && <div className={styles.errorMessage}>{error}</div>}
+        {success && <div className={styles.successMessage}>{success}</div>}
         
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
@@ -76,6 +89,7 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
               step="1"
               min="0"
               required
+              autoFocus
             />
           </div>
           

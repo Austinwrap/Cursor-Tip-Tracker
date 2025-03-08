@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Calendar from '../components/Calendar';
@@ -14,20 +16,23 @@ export default function TipsPage() {
   
   // Check for authenticated user
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+    // This needs to run only on the client side
+    if (typeof window !== 'undefined') {
+      const { data: authListener } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          setUser(session?.user || null);
+        }
+      );
+      
+      // Get initial auth state
+      supabase.auth.getSession().then(({ data: { session } }) => {
         setUser(session?.user || null);
-      }
-    );
-    
-    // Get initial auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-    });
-    
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
+      });
+      
+      return () => {
+        authListener?.subscription.unsubscribe();
+      };
+    }
   }, []);
   
   // Load tips when user changes
