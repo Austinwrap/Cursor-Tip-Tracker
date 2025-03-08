@@ -1,6 +1,6 @@
 [build]
   command = "npm run netlify-build"
-  publish = ".next"
+  publish = "out"
 
 [build.environment]
   NEXT_PUBLIC_URL = "https://tiptracker.ai"
@@ -13,30 +13,15 @@
   NEXT_PUBLIC_SUPABASE_URL = "https://bggsscexogsptcnnwckj.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZ3NzY2V4b2dzcHRjbm53Y2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEzNjgwMDQsImV4cCI6MjA1Njk0NDAwNH0.yRmBEA5ddBqoM-N9iOjQpyMtxQcBlbEUJ-diV396J94"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+# We're going to use a different approach without the Next.js plugin
+# [[plugins]]
+#  package = "@netlify/plugin-nextjs"
 
-[functions]
-  included_files = [".env.local"]
-
-# Handle all routes with Next.js
+# For all routes, serve the index.html file
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/server"
+  to = "/index.html"
   status = 200
-
-# Specific redirects for API routes
-[[redirects]]
-  from = "/api/stripe/webhook"
-  to = "/.netlify/functions/stripe-webhook"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-  force = true
 
 # Headers for static assets
 [[headers]]
