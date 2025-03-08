@@ -28,8 +28,15 @@ export default function Upgrade() {
   }
 
   const handleUpgradeClick = async (plan: string) => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+    
+    setIsLoading(true);
+    setMessage('');
+    
     try {
-      // Call the Stripe checkout API
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
@@ -37,22 +44,36 @@ export default function Upgrade() {
         },
         body: JSON.stringify({
           plan,
-          userId: user?.id,
+          userId: user.id,
         }),
       });
       
       const data = await response.json();
       
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+      
+      // For development mode direct upgrade
+      if (data.success) {
+        setMessage('Premium features enabled! Redirecting to dashboard...');
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 1500);
+        return;
+      }
+      
+      // For Stripe checkout
       if (data.url) {
-        // Redirect to Stripe checkout
         window.location.href = data.url;
       } else {
-        console.error('No checkout URL returned');
-        alert('There was an error creating the checkout session. Please try again.');
+        throw new Error('No checkout URL returned');
       }
     } catch (error) {
-      console.error('Error creating checkout session:', error);
-      alert('There was an error creating the checkout session. Please try again.');
+      console.error('Error:', error);
+      setMessage(`Error: ${error instanceof Error ? error.message : 'Failed to process upgrade'}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 

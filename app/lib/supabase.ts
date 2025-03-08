@@ -60,38 +60,49 @@ export async function getTipByDate(userId: string, date: string): Promise<Tip | 
 }
 
 export async function addTip(userId: string, date: string, amount: number): Promise<Tip | null> {
-  // Check if a tip already exists for this date
-  const existingTip = await getTipByDate(userId, date);
-  
-  if (existingTip) {
-    // Update existing tip
-    const { data, error } = await supabase
-      .from('tips')
-      .update({ amount })
-      .eq('id', existingTip.id)
-      .select()
-      .single();
+  try {
+    // Check if a tip already exists for this date
+    const existingTip = await getTipByDate(userId, date);
+    
+    if (existingTip) {
+      // Update existing tip
+      const { data, error } = await supabase
+        .from('tips')
+        .update({ amount })
+        .eq('id', existingTip.id)
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error updating tip:', error);
-      return null;
+      if (error) {
+        console.error('Error updating tip:', error);
+        return null;
+      }
+
+      return data;
+    } else {
+      // Create new tip with explicit fields
+      const newTip = {
+        user_id: userId,
+        date: date,
+        amount: amount
+      };
+      
+      const { data, error } = await supabase
+        .from('tips')
+        .insert([newTip])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding tip:', error);
+        return null;
+      }
+
+      return data;
     }
-
-    return data;
-  } else {
-    // Create new tip
-    const { data, error } = await supabase
-      .from('tips')
-      .insert([{ user_id: userId, date, amount }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding tip:', error);
-      return null;
-    }
-
-    return data;
+  } catch (error) {
+    console.error('Unexpected error in addTip:', error);
+    return null;
   }
 }
 
