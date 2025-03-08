@@ -12,6 +12,10 @@ const nextConfig = {
   },
   // Ensure trailing slashes are consistent
   trailingSlash: false,
+  // Explicitly enable the App Router
+  experimental: {
+    appDir: true,
+  },
 }
 
 module.exports = nextConfig 
