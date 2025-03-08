@@ -6,8 +6,10 @@ const nextConfig = {
     domains: ['bggsscexogsptcnnwckj.supabase.co'],
     unoptimized: true,
   },
-  // This is important for Netlify deployment
-  output: 'standalone',
+  // For Netlify, we should NOT use standalone output
+  // output: 'standalone',
+  // Specify the build directory that Netlify expects
+  distDir: '.next',
   // Ensure CSS modules are properly processed
   webpack: (config) => {
     return config;
