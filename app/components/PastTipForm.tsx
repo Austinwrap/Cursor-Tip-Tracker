@@ -17,6 +17,7 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [existingTip, setExistingTip] = useState<number | null>(null);
+  const [checkingTip, setCheckingTip] = useState(false);
   const { user } = useAuth();
 
   // Calculate max date (today)
@@ -34,6 +35,8 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
   const checkExistingTip = async (dateToCheck: string) => {
     if (!user) return;
     
+    setCheckingTip(true);
+    
     try {
       const tip = await getTipByDate(user.id, dateToCheck);
       if (tip) {
@@ -47,11 +50,15 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
       }
     } catch (err) {
       console.error('Error checking existing tip:', err);
+    } finally {
+      setCheckingTip(false);
     }
   };
 
   const handleDateChange = (newDate: string) => {
     setDate(newDate);
+    setError(null);
+    setSuccess(null);
     checkExistingTip(newDate);
   };
 
@@ -93,7 +100,7 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
       }
     } catch (err) {
       console.error('Error adding tip:', err);
-      setError('An error occurred');
+      setError('An error occurred while saving your tip. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -110,14 +117,16 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
       
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="bg-red-900/50 border-l-4 border-red-500 text-white p-3 rounded-sm">
-            {error}
+          <div className="bg-red-900/50 border-l-4 border-red-500 text-white p-4 rounded-md animate-fadeIn">
+            <p className="font-bold">Error</p>
+            <p>{error}</p>
           </div>
         )}
         
         {success && (
-          <div className="bg-green-900/50 border-l-4 border-green-500 text-white p-3 rounded-sm">
-            {success}
+          <div className="bg-green-900/50 border-l-4 border-green-500 text-white p-4 rounded-md animate-fadeIn">
+            <p className="font-bold">Success!</p>
+            <p>{success}</p>
           </div>
         )}
         
@@ -157,16 +166,31 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
               step="1"
               aria-label="Tip amount in dollars"
               required
+              disabled={checkingTip}
             />
+            {checkingTip && (
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent"></div>
+              </div>
+            )}
           </div>
         </div>
         
         <button
           type="submit"
-          className="w-full bg-white text-black font-bold text-lg py-4 px-4 rounded-md hover:bg-gray-200 transition-colors"
-          disabled={loading}
+          className={`w-full font-bold text-lg py-4 px-4 rounded-md transition-colors ${
+            loading || checkingTip
+              ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+              : 'bg-white text-black hover:bg-gray-200'
+          }`}
+          disabled={loading || checkingTip}
         >
-          {loading ? (existingTip ? 'UPDATING...' : 'ADDING...') : (existingTip ? 'UPDATE TIP' : 'ADD TIP')}
+          {loading 
+            ? (existingTip ? 'UPDATING...' : 'ADDING...') 
+            : checkingTip 
+              ? 'CHECKING...' 
+              : (existingTip ? 'UPDATE TIP' : 'ADD TIP')
+          }
         </button>
       </form>
     </div>
