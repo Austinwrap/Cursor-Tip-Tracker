@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { getTips, Tip } from '../lib/supabase';
 import { formatDate, formatCurrency } from '../lib/dateUtils';
@@ -26,6 +26,26 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
   const [quickEditError, setQuickEditError] = useState<string | null>(null);
   const { user } = useAuth();
 
+  // Memoized fetchTips function to avoid recreation on each render
+  const fetchTips = useCallback(async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log('Fetching tips for user:', user.id);
+      const tipsData = await getTips(user.id);
+      console.log('Tips fetched:', tipsData);
+      setTips(tipsData);
+    } catch (err) {
+      console.error('Error fetching tips:', err);
+      setError('Failed to load history');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
   // If external date control is provided, use it
   useEffect(() => {
     if (externalSelectedDate && onDateSelect) {
@@ -34,28 +54,39 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     }
   }, [externalSelectedDate, onDateSelect]);
 
+  // Fetch tips when component mounts or refreshTrigger changes
   useEffect(() => {
-    const fetchTips = async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        console.log('Fetching tips for user:', user.id);
-        const tipsData = await getTips(user.id);
-        console.log('Tips fetched:', tipsData);
-        setTips(tipsData);
-      } catch (err) {
-        console.error('Error fetching tips:', err);
-        setError('Failed to load history');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTips();
-  }, [user, refreshTrigger]); // Add refreshTrigger to dependencies
+  }, [fetchTips, refreshTrigger]);
+
+  // Set up real-time subscription to tips table
+  useEffect(() => {
+    if (!user) return;
+
+    // Subscribe to changes in the tips table for this user
+    const subscription = supabase
+      .channel('tips-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'tips',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          // Refresh tips when any change is detected
+          fetchTips();
+        }
+      )
+      .subscribe();
+
+    // Clean up subscription on unmount
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [user, fetchTips]);
 
   const handleTipAdded = async () => {
     // Refresh tips after a new one is added
@@ -64,6 +95,9 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     try {
       // Increment refresh trigger to force a refresh
       setRefreshTrigger(prev => prev + 1);
+      
+      // Explicitly fetch tips again
+      await fetchTips();
       
       // Close the form after successful addition
       setSelectedDate(null);
@@ -101,6 +135,9 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
         
         // Refresh tips
         setRefreshTrigger(prev => prev + 1);
+        
+        // Explicitly fetch tips again
+        await fetchTips();
       } else {
         setQuickEditError('Failed to save tip after multiple attempts. Please try again.');
       }

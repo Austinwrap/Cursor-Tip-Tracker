@@ -259,7 +259,11 @@ const TipForm: React.FC<TipFormProps> = ({ onTipAdded, selectedDate }) => {
         setSuccess(`$${amount} ${action} for ${formattedDate}`);
         setExistingTip(amountInCents);
         setAmount('');
-        onTipAdded(); // Notify parent component
+        
+        // Manually trigger a refresh of the tips data
+        setTimeout(() => {
+          onTipAdded(); // Notify parent component
+        }, 500); // Small delay to ensure the database has time to update
       } else {
         setError('Failed to add tip after multiple attempts. Please try again or contact support.');
       }
