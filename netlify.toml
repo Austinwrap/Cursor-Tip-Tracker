@@ -19,13 +19,13 @@
 [functions]
   included_files = [".env.local"]
 
-# Handle SPA routing for all paths
+# For Next.js, we don't need to redirect everything to index.html
+# Instead, let the Next.js plugin handle routing
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/.netlify/functions/nextjs-server"
   status = 200
   force = true
-  conditions = {Role = ["anonymous", "authenticated"]}
 
 # Specific redirects for API routes
 [[redirects]]

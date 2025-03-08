@@ -2,10 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'standalone',
   images: {
-    domains: ['randomuser.me', 'bggsscexogsptcnnwckj.supabase.co'],
+    domains: ['bggsscexogsptcnnwckj.supabase.co'],
+    unoptimized: true,
   },
+  // This is important for Netlify deployment
+  output: 'standalone',
   // Ensure CSS modules are properly processed
   webpack: (config) => {
     return config;
