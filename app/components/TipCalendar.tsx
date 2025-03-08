@@ -6,13 +6,26 @@ import { getTips, Tip } from '../lib/supabase';
 import { formatDate, formatCurrency } from '../lib/dateUtils';
 import PastTipForm from './PastTipForm';
 
-const TipCalendar: React.FC = () => {
+interface TipCalendarProps {
+  selectedDate?: Date;
+  onDateSelect?: (date: Date) => void;
+}
+
+const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelectedDate, onDateSelect }) => {
   const [tips, setTips] = useState<Tip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const { user } = useAuth();
+
+  // If external date control is provided, use it
+  useEffect(() => {
+    if (externalSelectedDate && onDateSelect) {
+      // Update the current month to match the external selected date
+      setCurrentMonth(new Date(externalSelectedDate));
+    }
+  }, [externalSelectedDate, onDateSelect]);
 
   useEffect(() => {
     const fetchTips = async () => {
@@ -58,7 +71,13 @@ const TipCalendar: React.FC = () => {
   };
 
   const handleDateClick = (dateString: string) => {
-    // Toggle selected date
+    // If external date control is provided, use it
+    if (onDateSelect) {
+      onDateSelect(new Date(dateString));
+      return;
+    }
+    
+    // Otherwise use internal state
     if (selectedDate === dateString) {
       setSelectedDate(null);
     } else {
