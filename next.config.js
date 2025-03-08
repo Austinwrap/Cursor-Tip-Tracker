@@ -6,10 +6,8 @@ const nextConfig = {
     domains: ['bggsscexogsptcnnwckj.supabase.co'],
     unoptimized: true,
   },
-  // Use static export for Netlify
-  output: 'export',
-  // Don't need distDir with export
-  // distDir: '.next',
+  // Remove static export - we need server-side rendering
+  // output: 'export',
   // Ensure CSS modules are properly processed
   webpack: (config) => {
     return config;
