@@ -35,6 +35,24 @@ const DebugPanel: React.FC = () => {
         throw new Error(`Supabase connection error: ${connectionError.message}`);
       }
       
+      // Check user record
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      let userExists = true;
+      if (userError) {
+        if (userError.code === 'PGRST116') {
+          // User not found
+          userExists = false;
+          addLog(`User record not found for ID: ${user.id}`);
+        } else {
+          throw new Error(`User record error: ${userError.message}`);
+        }
+      }
+      
       // Check tips table
       const { data: tipsData, error: tipsError } = await supabase
         .from('tips')
@@ -43,17 +61,6 @@ const DebugPanel: React.FC = () => {
       
       if (tipsError) {
         throw new Error(`Tips table error: ${tipsError.message}`);
-      }
-      
-      // Check user record
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (userError) {
-        throw new Error(`User record error: ${userError.message}`);
       }
       
       // Check user settings
@@ -66,11 +73,12 @@ const DebugPanel: React.FC = () => {
       
       setDbInfo({
         connection: 'OK',
+        userExists,
+        user: userData || null,
         tips: {
           count: tipsData?.length || 0,
           data: tipsData
         },
-        user: userData,
         settings: settingsData || 'Not found'
       });
       
@@ -83,12 +91,72 @@ const DebugPanel: React.FC = () => {
     }
   };
 
+  const createUserRecord = async () => {
+    if (!user) return;
+    
+    addLog(`Creating user record for ID: ${user.id}`);
+    
+    try {
+      // First check if user already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+      
+      if (!checkError && existingUser) {
+        addLog('User record already exists');
+        await checkDatabase();
+        return;
+      }
+      
+      // Create user record
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
+          id: user.id,
+          email: user.email,
+          is_paid: false
+        }])
+        .select();
+      
+      if (error) {
+        throw new Error(`Error creating user record: ${error.message}`);
+      }
+      
+      addLog(`User record created successfully: ${JSON.stringify(data)}`);
+      
+      // Refresh database info
+      await checkDatabase();
+    } catch (err: any) {
+      setError(err.message);
+      addLog(`Error: ${err.message}`);
+    }
+  };
+
   const testTipInsert = async () => {
     if (!user) return;
     
     addLog('Testing tip insert...');
     
     try {
+      // First ensure user record exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+      
+      if (checkError) {
+        if (checkError.code === 'PGRST116') {
+          // User not found, create user record first
+          addLog('User record not found, creating it first...');
+          await createUserRecord();
+        } else {
+          throw new Error(`Error checking user existence: ${checkError.message}`);
+        }
+      }
+      
       // Generate a test date (yesterday)
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
@@ -157,10 +225,23 @@ const DebugPanel: React.FC = () => {
           ) : dbInfo ? (
             <div className="space-y-2 text-xs">
               <p>Connection: {dbInfo.connection}</p>
+              <p>User Record: {dbInfo.userExists ? 'Exists' : 'Missing'}</p>
+              {!dbInfo.userExists && (
+                <button
+                  onClick={createUserRecord}
+                  className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs"
+                >
+                  Create User Record
+                </button>
+              )}
+              {dbInfo.user && (
+                <>
+                  <p>User ID: {dbInfo.user?.id}</p>
+                  <p>User Email: {dbInfo.user?.email}</p>
+                  <p>Is Paid: {dbInfo.user?.is_paid ? 'Yes' : 'No'}</p>
+                </>
+              )}
               <p>Tips Count: {dbInfo.tips.count}</p>
-              <p>User ID: {dbInfo.user?.id}</p>
-              <p>User Email: {dbInfo.user?.email}</p>
-              <p>Is Paid: {dbInfo.user?.is_paid ? 'Yes' : 'No'}</p>
               
               <div className="mt-2">
                 <p className="font-semibold">Recent Tips:</p>
@@ -204,10 +285,16 @@ const DebugPanel: React.FC = () => {
           Check DB
         </button>
         <button
+          onClick={createUserRecord}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm"
+        >
+          Create User
+        </button>
+        <button
           onClick={testTipInsert}
           className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-sm"
         >
-          Test Tip Insert
+          Test Tip
         </button>
         <button
           onClick={clearLogs}

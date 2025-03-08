@@ -31,7 +31,49 @@ export async function saveTip(userId: string, date: string, amountInCents: numbe
   }
   
   try {
-    // First check if a tip already exists for this date
+    // First, check if the user exists in the users table
+    console.log(`TipService: Checking if user ${userId} exists`);
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+    
+    if (userError) {
+      console.error('TipService: Error checking user existence:', userError);
+      console.error('TipService: Error details:', JSON.stringify(userError));
+      
+      // If the user doesn't exist, create a user record
+      if (userError.code === 'PGRST116') {
+        console.log(`TipService: User ${userId} not found, creating user record`);
+        
+        // Get user email from auth
+        const { data: authData } = await supabase.auth.getUser();
+        const email = authData?.user?.email || 'unknown@example.com';
+        
+        // Create user record
+        const { error: insertUserError } = await supabase
+          .from('users')
+          .insert([{ 
+            id: userId, 
+            email: email,
+            is_paid: false
+          }]);
+        
+        if (insertUserError) {
+          console.error('TipService: Error creating user record:', insertUserError);
+          console.error('TipService: Error details:', JSON.stringify(insertUserError));
+          return false;
+        }
+        
+        console.log(`TipService: Created user record for ${userId}`);
+      } else {
+        // Some other error occurred
+        return false;
+      }
+    }
+    
+    // Now check if a tip already exists for this date
     console.log(`TipService: Checking for existing tip on ${date}`);
     const { data: existingTip, error: fetchError } = await supabase
       .from('tips')
