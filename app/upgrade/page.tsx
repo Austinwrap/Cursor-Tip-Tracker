@@ -258,26 +258,56 @@ export default function Upgrade() {
           </div>
         </div>
         
-        <div className="mt-16 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6 text-center">Premium Features</h2>
+        <div className="mt-8 bg-black/30 backdrop-blur-sm border border-gray-800 rounded-lg p-5 shadow-lg">
+          <h3 className="text-xl font-bold mb-6 text-center text-yellow-400">Premium Features</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 hover:border-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20">
-              <div className="text-blue-400 text-3xl mb-4">📊</div>
-              <h3 className="text-xl font-bold mb-2">Advanced Analytics</h3>
-              <p className="text-gray-400">Visualize your earnings with beautiful charts and graphs. Track trends over time and identify patterns.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-yellow-500/50 transition-all duration-300">
+              <div className="flex items-center mb-3">
+                <div className="bg-yellow-500/20 rounded-full p-2 mr-3 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 005 10a6 6 0 0012 0c0-.35-.035-.691-.1-1.02A5 5 0 0010 11z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-white">AI Chat Assistant</h4>
+              </div>
+              <p className="text-gray-400 text-sm ml-10">Get personalized insights about your tips and earnings from our AI.</p>
             </div>
             
-            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 hover:border-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20">
-              <div className="text-blue-400 text-3xl mb-4">🔮</div>
-              <h3 className="text-xl font-bold mb-2">AI Forecasting</h3>
-              <p className="text-gray-400">Get AI-powered predictions about your future earnings based on your historical data.</p>
+            <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-yellow-500/50 transition-all duration-300">
+              <div className="flex items-center mb-3">
+                <div className="bg-yellow-500/20 rounded-full p-2 mr-3 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-white">Advanced Analytics</h4>
+              </div>
+              <p className="text-gray-400 text-sm ml-10">Discover your best days, trends, and patterns with interactive charts.</p>
             </div>
             
-            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 hover:border-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20">
-              <div className="text-blue-400 text-3xl mb-4">💬</div>
-              <h3 className="text-xl font-bold mb-2">AI Chat Assistant</h3>
-              <p className="text-gray-400">Chat with our AI assistant about your finances, get personalized advice, and more.</p>
+            <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-yellow-500/50 transition-all duration-300">
+              <div className="flex items-center mb-3">
+                <div className="bg-yellow-500/20 rounded-full p-2 mr-3 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-white">Future Projections</h4>
+              </div>
+              <p className="text-gray-400 text-sm ml-10">Get AI-powered predictions about your future earnings potential.</p>
+            </div>
+            
+            <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-yellow-500/50 transition-all duration-300">
+              <div className="flex items-center mb-3">
+                <div className="bg-yellow-500/20 rounded-full p-2 mr-3 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-white">Optimization Tips</h4>
+              </div>
+              <p className="text-gray-400 text-sm ml-10">Receive personalized recommendations to maximize your earnings.</p>
             </div>
           </div>
         </div>

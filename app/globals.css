@@ -13,6 +13,7 @@ body {
   font-family: 'Inter', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* Prevent horizontal scrolling on mobile */
 }
 
 /* Mobile optimizations */
@@ -41,6 +42,49 @@ html {
   outline: none;
 }
 
+/* iPhone-specific optimizations */
+@media screen and (max-width: 428px) { /* iPhone 13 Pro Max width */
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  
+  h1 {
+    font-size: 1.75rem !important;
+  }
+  
+  h2 {
+    font-size: 1.5rem !important;
+  }
+  
+  h3 {
+    font-size: 1.25rem !important;
+  }
+  
+  p {
+    font-size: 0.9375rem !important;
+  }
+  
+  .card {
+    padding: 1rem !important;
+  }
+  
+  /* Ensure buttons are properly sized for touch */
+  button, .btn, a.btn {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+  }
+  
+  /* Fix for iPhone notch */
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 @layer components {
   .btn {
     @apply bg-black text-white border border-accent py-2 px-4 rounded hover:bg-hover transition-colors;
@@ -63,6 +107,28 @@ html {
     .card {
       @apply p-3;
     }
+    
+    /* Reduce spacing on mobile */
+    .space-y-8 {
+      @apply space-y-4;
+    }
+    
+    .space-y-6 {
+      @apply space-y-3;
+    }
+    
+    .mb-8 {
+      @apply mb-4;
+    }
+    
+    .mb-6 {
+      @apply mb-3;
+    }
+    
+    /* Ensure grid items stack properly */
+    .grid {
+      @apply grid-cols-1;
+    }
   }
   
   /* Gradient text */
@@ -73,5 +139,10 @@ html {
   /* Glass effect */
   .glass {
     @apply bg-black bg-opacity-30 backdrop-blur-sm border border-gray-700/50;
+  }
+  
+  /* Premium badge */
+  .premium-badge {
+    @apply bg-gradient-to-r from-yellow-500 to-yellow-600 text-black text-xs px-2 py-1 rounded-full font-bold;
   }
 } 

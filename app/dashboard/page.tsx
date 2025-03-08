@@ -172,26 +172,43 @@ export default function Dashboard() {
         </div>
 
         {isPaid && (
-          <div className="mb-8 bg-gradient-to-r from-yellow-900/50 to-yellow-800/50 border-2 border-yellow-500 rounded-lg p-6 shadow-xl">
+          <div className="mb-6 bg-gradient-to-r from-gray-900 to-black border border-yellow-500/50 rounded-lg p-4 shadow-lg">
             <div className="flex flex-col md:flex-row items-center justify-between">
-              <div className="mb-4 md:mb-0">
-                <h3 className="text-2xl font-bold mb-2 text-yellow-400">Premium Dashboard Available!</h3>
-                <p className="text-gray-300 mb-2">
-                  Your premium features are ready to use. Access your exclusive AI assistant, advanced analytics, and more.
+              <div className="mb-3 md:mb-0">
+                <h3 className="text-lg font-bold mb-1 text-yellow-400">Premium Dashboard</h3>
+                <p className="text-gray-400 text-sm">
+                  Access your premium features and analytics
                 </p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <span className="bg-black/30 text-yellow-400 text-xs px-2 py-1 rounded-full border border-yellow-500">AI Chat Assistant</span>
-                  <span className="bg-black/30 text-yellow-400 text-xs px-2 py-1 rounded-full border border-yellow-500">Interactive Charts</span>
-                  <span className="bg-black/30 text-yellow-400 text-xs px-2 py-1 rounded-full border border-yellow-500">Earnings Projections</span>
-                  <span className="bg-black/30 text-yellow-400 text-xs px-2 py-1 rounded-full border border-yellow-500">Optimization Tips</span>
-                </div>
               </div>
               <Link 
                 href="/premium-dashboard" 
-                className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-bold py-3 px-8 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all shadow-lg transform hover:scale-105 flex items-center"
+                className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black text-sm font-bold py-2 px-4 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all shadow-lg flex items-center"
               >
-                <span>Go to Premium Dashboard</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                <span>Open Premium Dashboard</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {!isPaid && (
+          <div className="mt-8 mb-4">
+            <div className="border-t border-gray-800 pt-6">
+              <div className="flex items-center mb-3">
+                <div className="h-6 w-1 bg-yellow-500 rounded-full mr-2"></div>
+                <h3 className="text-lg font-semibold text-white">Unlock Premium Features</h3>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">
+                Enhance your tip tracking experience with advanced analytics, AI insights, and more.
+              </p>
+              <Link 
+                href="/upgrade" 
+                className="inline-flex items-center text-yellow-400 hover:text-yellow-300 transition-colors text-sm font-medium"
+              >
+                Learn more about Premium
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </Link>
