@@ -24,6 +24,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
   const [savingQuickEdit, setSavingQuickEdit] = useState(false);
   const [quickEditSuccess, setQuickEditSuccess] = useState<string | null>(null);
   const [quickEditError, setQuickEditError] = useState<string | null>(null);
+  const [showLedger, setShowLedger] = useState(false);
   const { user } = useAuth();
 
   // Memoized fetchTips function to avoid recreation on each render
@@ -42,9 +43,8 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
       setTips([...tipsData]);
       
       // Debug: Log the tips that should be displayed
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth();
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth();
       const monthStart = new Date(year, month, 1).toISOString().split('T')[0];
       const monthEnd = new Date(year, month + 1, 0).toISOString().split('T')[0];
       
@@ -62,7 +62,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, currentMonth]);
 
   // Helper function to calculate monthly total
   const calculateMonthlyTotal = (tipsData = tips) => {
@@ -405,6 +405,75 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     }
   };
 
+  // Render the ledger view of all tips
+  const renderLedger = () => {
+    // Sort tips by date, most recent first
+    const sortedTips = [...tips].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    
+    return (
+      <div className="bg-black border border-gray-800 rounded-lg p-6 shadow-lg">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-white">Tip History</h2>
+          <button 
+            onClick={() => setShowLedger(false)}
+            className="text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-md text-sm transition-colors"
+          >
+            Back to Calendar
+          </button>
+        </div>
+        
+        {sortedTips.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            No tips recorded yet. Add your first tip to see it here.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-900 text-gray-400 text-xs uppercase">
+                <tr>
+                  <th className="px-4 py-3 rounded-tl-lg">Date</th>
+                  <th className="px-4 py-3">Day</th>
+                  <th className="px-4 py-3 text-right rounded-tr-lg">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {sortedTips.map((tip) => {
+                  const date = new Date(tip.date);
+                  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+                  
+                  return (
+                    <tr 
+                      key={tip.id} 
+                      className="bg-gray-900/30 hover:bg-gray-800 transition-colors cursor-pointer"
+                      onClick={() => handleDateClick(tip.date)}
+                    >
+                      <td className="px-4 py-3 text-gray-300">{formatDate(tip.date)}</td>
+                      <td className="px-4 py-3 text-gray-400">{dayOfWeek}</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-400">
+                        {formatCurrency(tip.amount)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="bg-gray-900">
+                <tr>
+                  <td className="px-4 py-3 font-bold rounded-bl-lg">Total</td>
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 text-right font-bold text-green-400 rounded-br-lg">
+                    {formatCurrency(tips.reduce((sum, tip) => sum + tip.amount, 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderCalendar = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -540,6 +609,16 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
             <p className="text-2xl font-bold text-green-400">{formatCurrency(monthlyTotal)}</p>
           </div>
           
+          {/* View toggle button */}
+          <div className="mb-4 flex justify-center">
+            <button 
+              onClick={() => setShowLedger(true)}
+              className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-md transition-colors"
+            >
+              View Tip History
+            </button>
+          </div>
+          
           {/* Quick edit feedback messages */}
           {quickEditSuccess && (
             <div className="mb-4 p-2 bg-green-900/30 border border-green-500/30 rounded text-sm text-green-400 text-center">
@@ -618,7 +697,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     );
   }
 
-  return renderCalendar();
+  return showLedger ? renderLedger() : renderCalendar();
 };
 
 export default TipCalendar; 

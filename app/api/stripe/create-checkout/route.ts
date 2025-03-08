@@ -6,13 +6,16 @@ import { supabase } from '@/app/lib/supabase';
 let stripe: Stripe | null = null;
 try {
   if (process.env.STRIPE_SECRET_KEY) {
-    // Initialize without specifying API version to use the default
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    // Initialize with API version to ensure compatibility
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16', // Use a specific API version for stability
+    });
+    console.log('Stripe initialized successfully');
   } else {
     console.warn('Stripe secret key not found. Using development mode.');
   }
 } catch (error) {
-  console.warn('Failed to initialize Stripe:', error);
+  console.error('Failed to initialize Stripe:', error);
 }
 
 // Dummy price IDs for development
@@ -27,16 +30,20 @@ export async function POST(request: Request) {
   try {
     const { plan, userId } = await request.json();
     
+    console.log('Checkout request received:', { plan, userId });
+    
     if (!userId) {
+      console.error('User ID is required but was not provided');
       return NextResponse.json(
         { error: 'User ID is required' },
         { status: 400 }
       );
     }
     
-    // In development mode, directly update the user's subscription status
-    if (!stripe || process.env.NODE_ENV === 'development') {
-      console.log('Development mode: Enabling premium without Stripe payment');
+    // In development mode or if Stripe is not configured, directly update the user's subscription status
+    if (!stripe || process.env.NODE_ENV === 'development' || !process.env.STRIPE_SECRET_KEY || 
+        process.env.STRIPE_SECRET_KEY.includes('your_key_here')) {
+      console.log('Development mode or Stripe not configured: Enabling premium without Stripe payment');
       
       // Update the user's is_paid status in the database
       const { error } = await supabase
@@ -55,46 +62,72 @@ export async function POST(request: Request) {
       // Redirect to dashboard with success message
       return NextResponse.json({ 
         success: true,
+        dev: true,
         url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?success=true&dev=true`
       });
     }
     
     // For production with Stripe configured
+    console.log('Creating Stripe checkout session for plan:', plan);
+    
     // Get the price ID based on the selected plan
     let priceId = plan === 'monthly' 
       ? process.env.STRIPE_MONTHLY_PRICE_ID 
       : process.env.STRIPE_ANNUAL_PRICE_ID;
     
     // Use dummy price IDs if real ones aren't available
-    if (!priceId) {
+    if (!priceId || priceId.includes('price_id_here')) {
       console.warn('Price ID not configured, using dummy price ID');
       priceId = plan === 'monthly' ? DUMMY_MONTHLY_PRICE_ID : DUMMY_ANNUAL_PRICE_ID;
     }
     
+    console.log('Using price ID:', priceId);
+    
     // Create a Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
+    try {
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?success=true`,
+        cancel_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/upgrade?canceled=true`,
+        client_reference_id: userId, // Store the user ID for the webhook
+        metadata: {
+          userId: userId,
+          plan: plan
         },
-      ],
-      mode: 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/upgrade?canceled=true`,
-      client_reference_id: userId, // Store the user ID for the webhook
-      metadata: {
-        userId: userId,
-      },
-    });
-    
-    return NextResponse.json({ sessionId: session.id, url: session.url });
-    
-  } catch (error) {
+      });
+      
+      console.log('Checkout session created:', session.id);
+      return NextResponse.json({ sessionId: session.id, url: session.url });
+    } catch (stripeError: any) {
+      console.error('Stripe error creating checkout session:', stripeError);
+      
+      // Provide more detailed error information
+      let errorMessage = 'Error creating checkout session. Please try again.';
+      
+      if (stripeError.type === 'StripeInvalidRequestError') {
+        if (stripeError.message.includes('No such price')) {
+          errorMessage = 'Invalid price ID. Please contact support.';
+        } else if (stripeError.message.includes('api_key')) {
+          errorMessage = 'Stripe API key issue. Please contact support.';
+        }
+      }
+      
+      return NextResponse.json(
+        { error: errorMessage, details: stripeError.message },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
     console.error('Error creating checkout session:', error);
     return NextResponse.json(
-      { error: 'Error creating checkout session. Please try again.' },
+      { error: 'Error creating checkout session. Please try again.', details: error.message },
       { status: 500 }
     );
   }
