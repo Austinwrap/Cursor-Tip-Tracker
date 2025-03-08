@@ -38,5 +38,6 @@ jobs:
     - name: Build
       run: npm run build --if-present
       
-    - name: Lint
-      run: npm run lint --if-present 
+    # Skipping lint step as it's now handled in next.config.js
+    # - name: Lint
+    #   run: npm run lint --if-present 

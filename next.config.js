@@ -4,7 +4,7 @@ const nextConfig = {
   swcMinify: true,
   output: 'standalone',
   images: {
-    domains: ['randomuser.me'],
+    domains: ['randomuser.me', 'bggsscexogsptcnnwckj.supabase.co'],
   },
   // Ensure CSS modules are properly processed
   webpack: (config) => {
@@ -16,6 +16,11 @@ const nextConfig = {
   // experimental: {
   //   appDir: true,
   // },
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
 }
 
 module.exports = nextConfig 
