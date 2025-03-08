@@ -50,7 +50,13 @@ export default function Dashboard() {
           {/* Tip Form Section */}
           <div className="bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
             <h2 className="text-xl font-semibold mb-4 text-center">Enter Tips</h2>
-            <TipForm selectedDate={selectedDate} />
+            <TipForm 
+              selectedDate={selectedDate} 
+              onTipAdded={() => {
+                // Refresh data if needed
+                console.log('Tip added');
+              }} 
+            />
           </div>
         </div>
         

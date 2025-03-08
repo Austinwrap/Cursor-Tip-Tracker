@@ -1,19 +1,28 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { addTip } from '../lib/supabase';
 import { getCurrentDate, formatDate } from '../lib/dateUtils';
 
-const TipForm: React.FC<{ onTipAdded: () => void }> = ({ onTipAdded }) => {
+interface TipFormProps {
+  onTipAdded: () => void;
+  selectedDate?: Date;
+}
+
+const TipForm: React.FC<TipFormProps> = ({ onTipAdded, selectedDate }) => {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const { user } = useAuth();
   
-  const currentDate = getCurrentDate();
-  const formattedDate = formatDate(currentDate);
+  // Use selectedDate if provided, otherwise use current date
+  const dateToUse = selectedDate 
+    ? selectedDate.toISOString().split('T')[0]
+    : getCurrentDate();
+  
+  const formattedDate = formatDate(dateToUse);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +45,7 @@ const TipForm: React.FC<{ onTipAdded: () => void }> = ({ onTipAdded }) => {
       // Convert dollars to cents for storage
       const amountInCents = Math.round(Number(amount) * 100);
       
-      const result = await addTip(user.id, currentDate, amountInCents);
+      const result = await addTip(user.id, dateToUse, amountInCents);
       
       if (result) {
         setSuccess(`$${amount} added`);
