@@ -15,8 +15,24 @@ export interface Tip {
 export async function saveTip(userId: string, date: string, amountInCents: number): Promise<boolean> {
   console.log(`TipService: Saving tip for user ${userId} on ${date} with amount ${amountInCents} cents`);
   
+  if (!userId) {
+    console.error('TipService: Cannot save tip - userId is empty or null');
+    return false;
+  }
+  
+  if (!date) {
+    console.error('TipService: Cannot save tip - date is empty or null');
+    return false;
+  }
+  
+  if (isNaN(amountInCents) || amountInCents <= 0) {
+    console.error(`TipService: Cannot save tip - invalid amount: ${amountInCents}`);
+    return false;
+  }
+  
   try {
     // First check if a tip already exists for this date
+    console.log(`TipService: Checking for existing tip on ${date}`);
     const { data: existingTip, error: fetchError } = await supabase
       .from('tips')
       .select('*')
@@ -26,6 +42,7 @@ export async function saveTip(userId: string, date: string, amountInCents: numbe
     
     if (fetchError) {
       console.error('TipService: Error checking for existing tip:', fetchError);
+      console.error('TipService: Error details:', JSON.stringify(fetchError));
       return false;
     }
     
@@ -40,6 +57,7 @@ export async function saveTip(userId: string, date: string, amountInCents: numbe
       
       if (updateError) {
         console.error('TipService: Error updating tip:', updateError);
+        console.error('TipService: Error details:', JSON.stringify(updateError));
         return false;
       }
       
@@ -49,24 +67,27 @@ export async function saveTip(userId: string, date: string, amountInCents: numbe
       console.log('TipService: No existing tip found, creating new tip...');
       
       // Insert new tip
-      const { error: insertError } = await supabase
+      const { data: insertData, error: insertError } = await supabase
         .from('tips')
         .insert([{ 
           user_id: userId, 
           date, 
           amount: amountInCents 
-        }]);
+        }])
+        .select();
       
       if (insertError) {
         console.error('TipService: Error inserting tip:', insertError);
+        console.error('TipService: Error details:', JSON.stringify(insertError));
         return false;
       }
       
-      console.log('TipService: Tip created successfully');
+      console.log('TipService: Tip created successfully:', insertData);
       return true;
     }
   } catch (err) {
     console.error('TipService: Unexpected error in saveTip:', err);
+    console.error('TipService: Error details:', JSON.stringify(err));
     return false;
   }
 }
