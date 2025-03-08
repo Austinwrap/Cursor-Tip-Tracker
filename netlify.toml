@@ -9,9 +9,9 @@
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY"
   NEXT_USE_TRAILING_SLASH = "false"
   NEXT_TELEMETRY_DISABLED = "1"
-  # Dummy values for build (will be overridden by actual env vars in Netlify)
-  NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co"
-  NEXT_PUBLIC_SUPABASE_ANON_KEY = "dummy-key"
+  # Actual Supabase credentials (will be overridden by environment variables in Netlify dashboard if set)
+  NEXT_PUBLIC_SUPABASE_URL = "https://bggsscexogsptcnnwckj.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZ3NzY2V4b2dzcHRjbm53Y2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEzNjgwMDQsImV4cCI6MjA1Njk0NDAwNH0.yRmBEA5ddBqoM-N9iOjQpyMtxQcBlbEUJ-diV396J94"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
