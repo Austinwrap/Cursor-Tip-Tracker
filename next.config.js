@@ -6,18 +6,11 @@ const nextConfig = {
     domains: ['bggsscexogsptcnnwckj.supabase.co'],
     unoptimized: true,
   },
-  // Remove static export - we need server-side rendering
-  // output: 'export',
-  // Ensure CSS modules are properly processed
-  webpack: (config) => {
-    return config;
-  },
-  // Ensure trailing slashes are consistent
-  trailingSlash: false,
-  // App Router configuration
+  // Use static export for Netlify
+  output: 'export',
+  // Disable server components since we're using static export
   experimental: {
     appDir: true,
-    serverComponentsExternalPackages: ['sharp'],
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
