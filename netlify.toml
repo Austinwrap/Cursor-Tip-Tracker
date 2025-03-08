@@ -17,7 +17,48 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# No need for custom redirects - the plugin handles this
+# Add specific redirects for application routes
+[[redirects]]
+  from = "/tips"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/dashboard"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/history"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/analytics"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/signin"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/signup"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+  force = true
+
+# Catch-all redirect for any other routes
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
 
 # Headers for static assets
 [[headers]]

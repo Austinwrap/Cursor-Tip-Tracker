@@ -14,15 +14,17 @@ const nextConfig = {
   },
   // Ensure trailing slashes are consistent
   trailingSlash: false,
-  // App Router is enabled by default in Next.js 14
-  // experimental: {
-  //   appDir: true,
-  // },
+  // Explicitly enable the App Router
+  experimental: {
+    appDir: true,
+  },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  // Add this for better Netlify compatibility
+  poweredByHeader: false,
 }
 
 module.exports = nextConfig 
