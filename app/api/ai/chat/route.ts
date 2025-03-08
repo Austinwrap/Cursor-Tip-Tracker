@@ -128,6 +128,114 @@ function formatCurrency(amount: number): string {
   }).format(amount / 100); // Convert cents to dollars
 }
 
+// Generate a response based on tip data
+function generateResponse(message: string, tips: any[]) {
+  // Analyze the question
+  const analysis = analyzeQuestion(message);
+  const dateRange = getDateRange(analysis.timeframe);
+  
+  // Filter tips based on date range
+  const filteredTips = tips.filter(tip => {
+    const tipDate = tip.date;
+    return tipDate >= dateRange.start && tipDate <= dateRange.end;
+  });
+  
+  // Generate response based on analysis
+  let response = '';
+  
+  switch (analysis.type) {
+    case 'total':
+      if (filteredTips.length === 0) {
+        response = `I don't see any tips for the specified time period.`;
+      } else {
+        const total = filteredTips.reduce((sum, tip) => sum + tip.amount, 0);
+        response = `Your total tips for this period are ${formatCurrency(total)}.`;
+      }
+      break;
+      
+    case 'average':
+      if (filteredTips.length === 0) {
+        response = `I don't see any tips for the specified time period.`;
+      } else {
+        const total = filteredTips.reduce((sum, tip) => sum + tip.amount, 0);
+        const average = total / filteredTips.length;
+        response = `Your average tip for this period is ${formatCurrency(average)} (across ${filteredTips.length} days).`;
+      }
+      break;
+      
+    case 'best':
+      if (filteredTips.length === 0) {
+        response = `I don't see any tips for the specified time period.`;
+      } else {
+        const bestTip = filteredTips.reduce((best, tip) => 
+          tip.amount > best.amount ? tip : best, filteredTips[0]);
+        response = `Your best day was ${bestTip.date} with ${formatCurrency(bestTip.amount)}.`;
+      }
+      break;
+      
+    case 'worst':
+      if (filteredTips.length === 0) {
+        response = `I don't see any tips for the specified time period.`;
+      } else {
+        const worstTip = filteredTips.reduce((worst, tip) => 
+          tip.amount < worst.amount ? tip : worst, filteredTips[0]);
+        response = `Your lowest tip day was ${worstTip.date} with ${formatCurrency(worstTip.amount)}.`;
+      }
+      break;
+      
+    case 'trend':
+      if (filteredTips.length < 7) {
+        response = `I need at least a week of data to analyze trends. Please add more tips.`;
+      } else {
+        // Simple trend analysis
+        const sortedTips = [...filteredTips].sort((a, b) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        const firstWeekAvg = sortedTips.slice(0, 7)
+          .reduce((sum, tip) => sum + tip.amount, 0) / 7;
+        const lastWeekAvg = sortedTips.slice(-7)
+          .reduce((sum, tip) => sum + tip.amount, 0) / 7;
+        
+        const percentChange = ((lastWeekAvg - firstWeekAvg) / firstWeekAvg) * 100;
+        
+        if (percentChange > 10) {
+          response = `Your tips are trending up! You've seen a ${percentChange.toFixed(1)}% increase comparing your most recent week to your earliest week in this period.`;
+        } else if (percentChange < -10) {
+          response = `Your tips are trending down. You've seen a ${Math.abs(percentChange).toFixed(1)}% decrease comparing your most recent week to your earliest week in this period.`;
+        } else {
+          response = `Your tips have been relatively stable (${percentChange > 0 ? '+' : ''}${percentChange.toFixed(1)}% change) comparing your most recent week to your earliest week in this period.`;
+        }
+      }
+      break;
+      
+    case 'predict':
+      if (filteredTips.length < 14) {
+        response = `I need at least two weeks of data to make predictions. Please add more tips.`;
+      } else {
+        // Simple prediction based on average
+        const avgDaily = filteredTips.reduce((sum, tip) => sum + tip.amount, 0) / filteredTips.length;
+        const monthlyPrediction = avgDaily * 30;
+        const yearlyPrediction = avgDaily * 365;
+        
+        response = `Based on your tip history, I predict you'll earn approximately ${formatCurrency(monthlyPrediction)} per month and ${formatCurrency(yearlyPrediction)} per year.`;
+      }
+      break;
+      
+    default:
+      // General response
+      if (tips.length === 0) {
+        response = "I don't see any tips in your history yet. Start adding tips to get insights!";
+      } else {
+        const total = tips.reduce((sum, tip) => sum + tip.amount, 0);
+        const average = total / tips.length;
+        response = `You have recorded ${tips.length} days of tips, with a total of ${formatCurrency(total)} and an average of ${formatCurrency(average)} per day. What would you like to know about your tips?`;
+      }
+      break;
+  }
+  
+  return response;
+}
+
 // Main handler for AI chat
 export async function POST(request: NextRequest) {
   try {
@@ -159,116 +267,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Analyze the user's question
-    const analysis = analyzeQuestion(message);
-    const dateRange = getDateRange(analysis.timeframe);
-    
     // Fetch user's tips
     const tips = await getTips(userId);
     
-    if (!tips || tips.length === 0) {
-      return NextResponse.json({
-        response: "I don't see any tips in your history yet. Start adding tips to get insights!"
-      });
-    }
+    // Generate a response based on the user's question and tip data
+    const response = generateResponse(message, tips);
     
-    // Filter tips based on date range if needed
-    const filteredTips = tips.filter(tip => {
-      const tipDate = tip.date;
-      return tipDate >= dateRange.start && tipDate <= dateRange.end;
-    });
-    
-    // Generate response based on analysis
-    let response = '';
-    
-    switch (analysis.type) {
-      case 'total':
-        if (filteredTips.length === 0) {
-          response = `I don't see any tips for the specified time period.`;
-        } else {
-          const total = filteredTips.reduce((sum, tip) => sum + tip.amount, 0);
-          response = `Your total tips for this period are ${formatCurrency(total)}.`;
-        }
-        break;
-        
-      case 'average':
-        if (filteredTips.length === 0) {
-          response = `I don't see any tips for the specified time period.`;
-        } else {
-          const total = filteredTips.reduce((sum, tip) => sum + tip.amount, 0);
-          const average = total / filteredTips.length;
-          response = `Your average tip for this period is ${formatCurrency(average)} (across ${filteredTips.length} days).`;
-        }
-        break;
-        
-      case 'best':
-        if (filteredTips.length === 0) {
-          response = `I don't see any tips for the specified time period.`;
-        } else {
-          const bestTip = filteredTips.reduce((best, tip) => 
-            tip.amount > best.amount ? tip : best, filteredTips[0]);
-          response = `Your best day was ${bestTip.date} with ${formatCurrency(bestTip.amount)}.`;
-        }
-        break;
-        
-      case 'worst':
-        if (filteredTips.length === 0) {
-          response = `I don't see any tips for the specified time period.`;
-        } else {
-          const worstTip = filteredTips.reduce((worst, tip) => 
-            tip.amount < worst.amount ? tip : worst, filteredTips[0]);
-          response = `Your lowest tip day was ${worstTip.date} with ${formatCurrency(worstTip.amount)}.`;
-        }
-        break;
-        
-      case 'trend':
-        if (filteredTips.length < 7) {
-          response = `I need at least a week of data to analyze trends. Please add more tips.`;
-        } else {
-          // Simple trend analysis
-          const sortedTips = [...filteredTips].sort((a, b) => 
-            new Date(a.date).getTime() - new Date(b.date).getTime());
-          
-          const firstWeekAvg = sortedTips.slice(0, 7)
-            .reduce((sum, tip) => sum + tip.amount, 0) / 7;
-          const lastWeekAvg = sortedTips.slice(-7)
-            .reduce((sum, tip) => sum + tip.amount, 0) / 7;
-          
-          const percentChange = ((lastWeekAvg - firstWeekAvg) / firstWeekAvg) * 100;
-          
-          if (percentChange > 10) {
-            response = `Your tips are trending up! You've seen a ${percentChange.toFixed(1)}% increase comparing your most recent week to your earliest week in this period.`;
-          } else if (percentChange < -10) {
-            response = `Your tips are trending down. You've seen a ${Math.abs(percentChange).toFixed(1)}% decrease comparing your most recent week to your earliest week in this period.`;
-          } else {
-            response = `Your tips have been relatively stable (${percentChange > 0 ? '+' : ''}${percentChange.toFixed(1)}% change) comparing your most recent week to your earliest week in this period.`;
-          }
-        }
-        break;
-        
-      case 'predict':
-        if (filteredTips.length < 14) {
-          response = `I need at least two weeks of data to make predictions. Please add more tips.`;
-        } else {
-          // Simple prediction based on average
-          const avgDaily = filteredTips.reduce((sum, tip) => sum + tip.amount, 0) / filteredTips.length;
-          const monthlyPrediction = avgDaily * 30;
-          const yearlyPrediction = avgDaily * 365;
-          
-          response = `Based on your tip history, I predict you'll earn approximately ${formatCurrency(monthlyPrediction)} per month and ${formatCurrency(yearlyPrediction)} per year.`;
-        }
-        break;
-        
-      default:
-        // General response
-        const total = tips.reduce((sum, tip) => sum + tip.amount, 0);
-        const average = total / tips.length;
-        response = `You have recorded ${tips.length} days of tips, with a total of ${formatCurrency(total)} and an average of ${formatCurrency(average)} per day. What would you like to know about your tips?`;
-        break;
-    }
-    
-    // In a production environment, we would use Google Cloud AI API here
-    // For now, we'll just return our generated response
     return NextResponse.json({ response });
     
   } catch (error) {
