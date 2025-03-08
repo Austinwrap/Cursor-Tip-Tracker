@@ -7,6 +7,7 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
   const [note, setNote] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   
   if (!isOpen) return null;
   
@@ -27,10 +28,11 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
     
     setIsLoading(true);
     setError('');
+    setSuccess('');
     
     try {
-      // Save tip to Supabase
-      const { error: saveError } = await supabase
+      // Save tip to Supabase with better error handling
+      const { data, error: saveError } = await supabase
         .from('tips')
         .insert({
           user_id: userId,
@@ -38,9 +40,15 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
           amount: Number(amount),
           note: note || '',
           type: 'cash'
-        });
+        })
+        .select();
       
-      if (saveError) throw new Error(saveError.message);
+      if (saveError) {
+        console.error('Supabase error:', saveError);
+        throw new Error(saveError.message);
+      }
+      
+      console.log('Tip saved successfully:', data);
       
       // Clear form and close modal
       setAmount('');

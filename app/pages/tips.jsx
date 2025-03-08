@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Calendar from '../components/Calendar';
 import TipEntryModal from '../components/TipEntryModal';
-import TipStats from '../components/TipStats';
-import PremiumTeaser from '../components/PremiumTeaser';
 import styles from '../styles/Tips.module.css';
 
 export default function TipsPage() {
@@ -102,16 +100,10 @@ export default function TipsPage() {
       {isLoading ? (
         <div className={styles.loading}>Loading your tips...</div>
       ) : (
-        <>
-          <Calendar 
-            tips={tips} 
-            onDayClick={handleDayClick} 
-          />
-          
-          <TipStats tips={tips} />
-          
-          <PremiumTeaser />
-        </>
+        <Calendar 
+          tips={tips} 
+          onDayClick={handleDayClick} 
+        />
       )}
       
       {isModalOpen && (

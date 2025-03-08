@@ -73,7 +73,7 @@ export default function Calendar({ tips = [], onDayClick }) {
         >
           <div className={styles.dayNumber}>{day}</div>
           {dayTotal > 0 && (
-            <div className={styles.tipAmount}>${dayTotal.toFixed(0)}</div>
+            <div className={styles.tipAmount}>${dayTotal}</div>
           )}
         </div>
       );
@@ -91,7 +91,7 @@ export default function Calendar({ tips = [], onDayClick }) {
         <div className={styles.monthDisplay}>
           <h2>{monthNames[month]} {year}</h2>
           <div className={styles.monthTotal}>
-            Total: ${monthlyTotal.toFixed(0)}
+            Total: ${monthlyTotal}
           </div>
         </div>
         <button className={styles.navButton} onClick={nextMonth}>

@@ -125,12 +125,12 @@
   
   .calendarGrid {
     padding: 4px;
-    gap: 1px;
+    gap: 2px;
   }
   
   .day {
     padding: 4px;
-    min-height: 42px;
+    min-height: 50px;
   }
   
   .dayNumber {
@@ -139,7 +139,6 @@
   
   .tipAmount {
     font-size: 0.85rem;
-    padding: 1px 4px;
   }
   
   .dayHeader {
