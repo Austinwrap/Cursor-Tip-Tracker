@@ -51,6 +51,14 @@ const Header: React.FC = () => {
               </svg>
             </button>
             
+            {isPaid && (
+              <div className="hidden md:flex items-center mr-4">
+                <span className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black text-xs px-2 py-1 rounded-full font-bold">
+                  PREMIUM
+                </span>
+              </div>
+            )}
+            
             <button
               onClick={signOut}
               className="bg-transparent border border-gray-700 text-gray-300 px-4 py-2 rounded-sm hover:border-white hover:text-white transition-all text-sm uppercase tracking-wider"

@@ -38,11 +38,11 @@ export default function Upgrade() {
       }
       
       // Show success message
-      setMessage('Premium features enabled! Refreshing...');
+      setMessage('Premium features enabled! Redirecting to dashboard...');
       
-      // Refresh the page after a short delay
+      // Redirect to dashboard after a short delay instead of refreshing
       setTimeout(() => {
-        window.location.reload();
+        router.push('/dashboard');
       }, 1500);
     } catch (error) {
       console.error('Error enabling premium features:', error);
