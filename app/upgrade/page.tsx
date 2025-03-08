@@ -282,6 +282,65 @@ export default function Upgrade() {
           </div>
         </div>
         
+        <div className="mt-8 bg-black/40 backdrop-blur-sm border border-gray-800 rounded-xl p-6 shadow-xl">
+          <h3 className="text-xl font-bold mb-4 text-center text-yellow-400">Premium Dashboard Features</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex items-start">
+              <div className="bg-yellow-500 rounded-full p-2 mr-3 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-black" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-1">AI Chat Assistant</h4>
+                <p className="text-gray-400 text-sm">Ask questions about your tips and get personalized insights from our AI.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <div className="bg-yellow-500 rounded-full p-2 mr-3 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-black" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-1">Complete Tip History</h4>
+                <p className="text-gray-400 text-sm">View and analyze your entire tip history with detailed breakdowns.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <div className="bg-yellow-500 rounded-full p-2 mr-3 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-black" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-1">Advanced Analytics</h4>
+                <p className="text-gray-400 text-sm">Discover your best days, trends, and patterns with interactive charts.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <div className="bg-yellow-500 rounded-full p-2 mr-3 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-black" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-1">Future Projections</h4>
+                <p className="text-gray-400 text-sm">Get AI-powered predictions about your future earnings potential.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-8 text-center">
+            <img src="/premium-dashboard-preview.png" alt="Premium Dashboard Preview" className="rounded-lg shadow-lg mx-auto max-w-full opacity-80 hover:opacity-100 transition-opacity duration-300" />
+            <p className="text-sm text-gray-500 mt-2">Preview of the Premium Dashboard</p>
+          </div>
+        </div>
+        
         <div className="mt-16 text-center">
           <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-4">100% Satisfaction Guarantee</h3>

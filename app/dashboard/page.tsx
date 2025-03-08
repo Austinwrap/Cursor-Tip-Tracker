@@ -170,6 +170,25 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {isPaid && (
+          <div className="mb-8 p-4 border border-yellow-500 rounded-lg bg-gradient-to-r from-gray-900 to-black shadow-lg">
+            <div className="flex flex-col md:flex-row items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold mb-2 text-yellow-400">Premium Dashboard Available</h3>
+                <p className="text-gray-300 mb-4 md:mb-0">
+                  Access your exclusive premium features, AI assistant, and advanced analytics.
+                </p>
+              </div>
+              <Link 
+                href="/premium-dashboard" 
+                className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-bold py-2 px-6 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all shadow-lg transform hover:scale-105"
+              >
+                Go to Premium Dashboard
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {process.env.NODE_ENV === 'development' && !isPaid && (
