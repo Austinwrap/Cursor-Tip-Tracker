@@ -14,16 +14,17 @@ const nextConfig = {
   },
   // Ensure trailing slashes are consistent
   trailingSlash: false,
-  // Explicitly enable the App Router
+  // App Router configuration
   experimental: {
     appDir: true,
+    serverComponentsExternalPackages: ['sharp'],
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Add this for better Netlify compatibility
+  // Better Netlify compatibility
   poweredByHeader: false,
 }
 

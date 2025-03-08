@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "netlify-build": "npm ci && rm -rf .next && next build",
+    "netlify-build": "npm ci && rm -rf .next && NEXT_TELEMETRY_DISABLED=1 next build",
     "start": "next start",
     "lint": "next lint"
   },
