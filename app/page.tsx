@@ -36,12 +36,6 @@ export default function Home() {
                   <Link 
                     href="/dashboard" 
                     className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-8 rounded-full hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg hover:shadow-blue-500/20"
-                    onClick={(e) => {
-                      // Prevent default behavior
-                      e.preventDefault();
-                      // Navigate programmatically
-                      window.location.href = '/dashboard';
-                    }}
                   >
                     Try Tip Tracker
                   </Link>
