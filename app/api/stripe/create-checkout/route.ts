@@ -6,9 +6,9 @@ import { supabase } from '@/app/lib/supabase';
 let stripe: Stripe | null = null;
 try {
   if (process.env.STRIPE_SECRET_KEY) {
-    // Initialize Stripe without specifying API version
+    // Initialize Stripe with the latest API version
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16', // Use a stable API version
+      apiVersion: '2025-02-24.acacia', // Updated to match the expected type
     });
     console.log('Stripe initialized successfully');
   } else {
