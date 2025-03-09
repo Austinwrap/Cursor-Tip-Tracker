@@ -1,667 +1,344 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/router';
-import { supabase, addTip, getUserTips, isBrowser } from '../lib/supabaseClient';
-import { 
-  Box, 
-  Container, 
-  Heading, 
-  Text, 
-  Button, 
-  useToast,
-  VStack,
-  HStack,
-  Spinner,
-  Center,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
-  Input,
-  FormControl,
-  FormLabel,
-  Grid,
-  GridItem,
-  Flex,
-  List,
-  ListItem
-} from '@chakra-ui/react';
+import { useState, useEffect } from 'react';
+import { Box, Heading } from '@chakra-ui/react';
 
 export default function TipsPage() {
-  const [user, setUser] = useState(null);
-  const router = useRouter();
-  const toast = useToast();
-  
-  const [tips, setTips] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [tipDate, setTipDate] = useState(new Date().toISOString().split('T')[0]);
-  const [tipAmount, setTipAmount] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const tipInputRef = useRef(null);
-  
-  // Calendar state
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [calendarDays, setCalendarDays] = useState([]);
-  
-  // Check if user is logged in - for website
+  // Use useEffect to inject our standalone Tip Tracker code
   useEffect(() => {
-    // This needs to run only in the browser
-    if (!isBrowser()) return;
+    if (typeof window === 'undefined') return;
     
-    const checkUser = async () => {
-      try {
-        // Get current session
-        const { data: { session } } = await supabase.auth.getSession();
+    // Create container for the Tip Tracker
+    const container = document.getElementById('tip-tracker-container');
+    if (!container) return;
+    
+    // Apply styles
+    document.body.style.backgroundColor = '#1a1a1a';
+    document.body.style.color = '#e0e0e0';
+    
+    // Create the Tip Tracker HTML structure
+    container.innerHTML = `
+      <div class="container">
+        <!-- Input Section -->
+        <div class="input-section">
+            <h2>Add New Tip</h2>
+            <input type="date" id="tipDate" required>
+            <input type="number" id="tipAmount" placeholder="Enter tip amount" step="0.01" min="0" required>
+            <button id="addTipButton">Add Tip</button>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="tip-list">
+            <h3>Tip Statistics</h3>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-label">Total Tips</div>
+                    <div class="stat-value" id="totalTips">$0.00</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Average Tip</div>
+                    <div class="stat-value" id="avgTip">$0.00</div>
+                </div>
+            </div>
+            <h3 style="margin-top: 20px;">Recent Tips</h3>
+            <ul id="tipList"></ul>
+        </div>
+
+        <!-- Calendar View -->
+        <div class="tip-list">
+            <div class="calendar-header">
+                <button id="prevMonthButton">&lt; Prev</button>
+                <div class="calendar-title" id="calendarTitle">March 2025</div>
+                <button id="nextMonthButton">Next &gt;</button>
+            </div>
+            <div class="calendar-view" id="calendarView">
+                <!-- Calendar will be dynamically generated -->
+            </div>
+        </div>
+      </div>
+    `;
+    
+    // Add the CSS styles
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      .container {
+          display: grid;
+          gap: 20px;
+          max-width: 900px;
+          margin: 20px auto;
+      }
+      .input-section {
+          background-color: #2a2a2a;
+          border: 1px solid #4d4d4d;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      }
+      .tip-list, .calendar-view {
+          background-color: #2a2a2a;
+          border: 1px solid #4d4d4d;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      }
+      .calendar-view {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 8px;
+          text-align: center;
+      }
+      .calendar-day {
+          padding: 10px;
+          background-color: #333;
+          border: 1px solid #4d4d4d;
+          border-radius: 6px;
+          position: relative;
+          min-height: 60px;
+          transition: transform 0.2s ease, background-color 0.3s ease;
+      }
+      .calendar-day:hover {
+          transform: scale(1.05);
+          background-color: #444;
+      }
+      .calendar-day.has-tip {
+          background-color: #3a4d3a;
+      }
+      .calendar-day .tip-text {
+          font-size: 11px;
+          color: #aaffaa;
+          font-weight: 500;
+          margin-top: 5px;
+          display: block;
+          background: rgba(0, 0, 0, 0.6);
+          border-radius: 4px;
+          padding: 2px 6px;
+      }
+      .calendar-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+      }
+      .calendar-title {
+          color: #aaffaa;
+          font-size: 18px;
+          font-weight: bold;
+      }
+      input, button {
+          margin: 5px;
+          padding: 10px;
+          border-radius: 4px;
+          border: 1px solid #4d4d4d;
+          background-color: #333;
+          color: #e0e0e0;
+          font-size: 14px;
+      }
+      input:focus, button:focus {
+          outline: none;
+          border-color: #aaffaa;
+          box-shadow: 0 0 5px rgba(170, 255, 170, 0.5);
+      }
+      button {
+          background-color: #4CAF50;
+          border: none;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+      }
+      button:hover {
+          background-color: #45a049;
+      }
+      ul {
+          list-style: none;
+          padding: 0;
+      }
+      li {
+          padding: 8px 0;
+          border-bottom: 1px solid #4d4d4d;
+      }
+      h2, h3 {
+          margin-top: 0;
+          color: #aaffaa;
+      }
+      .stats {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+          margin-top: 10px;
+      }
+      .stat-box {
+          background-color: #333;
+          padding: 10px;
+          border-radius: 4px;
+      }
+      .stat-label {
+          font-size: 12px;
+          color: #e0e0e0;
+      }
+      .stat-value {
+          font-size: 18px;
+          font-weight: bold;
+          color: #aaffaa;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    // Initialize the Tip Tracker functionality
+    let tips = JSON.parse(localStorage.getItem('tips')) || [];
+    let currentMonth = new Date();
+    
+    // Initialize on page load
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('tipDate').value = today;
+    renderTips();
+    renderCalendar();
+    updateStats();
+    
+    // Add event listeners
+    document.getElementById('addTipButton').addEventListener('click', addTip);
+    document.getElementById('prevMonthButton').addEventListener('click', prevMonth);
+    document.getElementById('nextMonthButton').addEventListener('click', nextMonth);
+    
+    // Add a new tip
+    function addTip() {
+      const date = document.getElementById('tipDate').value;
+      const amount = parseFloat(document.getElementById('tipAmount').value);
+
+      if (!date || isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid date and tip amount.');
+        return;
+      }
+
+      const tip = { date, amount };
+      tips.push(tip);
+      localStorage.setItem('tips', JSON.stringify(tips));
+      
+      renderTips();
+      renderCalendar();
+      updateStats();
+      document.getElementById('tipAmount').value = ''; // Clear input
+    }
+
+    // Render the tip list
+    function renderTips() {
+      const tipList = document.getElementById('tipList');
+      tipList.innerHTML = '';
+      
+      // Sort tips by date (newest first)
+      const sortedTips = [...tips].sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Show only the 5 most recent tips
+      const recentTips = sortedTips.slice(0, 5);
+      
+      recentTips.forEach(tip => {
+        const li = document.createElement('li');
+        const formattedDate = new Date(tip.date).toLocaleDateString();
+        li.textContent = `${formattedDate}: $${tip.amount.toFixed(2)}`;
+        tipList.appendChild(li);
+      });
+    }
+
+    // Update statistics
+    function updateStats() {
+      const totalTipsElement = document.getElementById('totalTips');
+      const avgTipElement = document.getElementById('avgTip');
+      
+      if (tips.length === 0) {
+        totalTipsElement.textContent = '$0.00';
+        avgTipElement.textContent = '$0.00';
+        return;
+      }
+      
+      const total = tips.reduce((sum, tip) => sum + tip.amount, 0);
+      const average = total / tips.length;
+      
+      totalTipsElement.textContent = `$${total.toFixed(2)}`;
+      avgTipElement.textContent = `$${average.toFixed(2)}`;
+    }
+
+    // Render the calendar
+    function renderCalendar() {
+      const calendarView = document.getElementById('calendarView');
+      const calendarTitle = document.getElementById('calendarTitle');
+      calendarView.innerHTML = '';
+      
+      // Set calendar title
+      const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+      calendarTitle.textContent = monthName;
+
+      // Get current month details
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      // Add day labels
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      daysOfWeek.forEach(day => {
+        const dayLabel = document.createElement('div');
+        dayLabel.textContent = day;
+        dayLabel.style.fontWeight = 'bold';
+        dayLabel.style.color = '#aaffaa';
+        calendarView.appendChild(dayLabel);
+      });
+
+      // Add empty slots for days before the 1st
+      for (let i = 0; i < firstDay; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day';
+        calendarView.appendChild(emptyDay);
+      }
+
+      // Add days of the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-day';
+        dayDiv.dataset.date = dateStr;
         
-        if (session?.user) {
-          console.log('User is logged in:', session.user);
-          setUser(session.user);
-          loadTips(session.user.id);
-        } else {
-          console.log('No user logged in');
-          setIsLoading(false);
+        // Add click handler to select date
+        dayDiv.addEventListener('click', () => {
+          document.getElementById('tipDate').value = dateStr;
+          document.getElementById('tipAmount').focus();
+        });
+        
+        const dayNum = document.createElement('span');
+        dayNum.textContent = day;
+        dayDiv.appendChild(dayNum);
+
+        // Highlight days with tips and show total
+        const dayTips = tips.filter(tip => tip.date === dateStr);
+        if (dayTips.length > 0) {
+          dayDiv.classList.add('has-tip');
+          const total = dayTips.reduce((sum, tip) => sum + tip.amount, 0);
+          const tipText = document.createElement('span');
+          tipText.className = 'tip-text';
+          tipText.textContent = `$${total.toFixed(2)}`;
+          dayDiv.appendChild(tipText);
         }
-      } catch (err) {
-        console.error('Error checking auth:', err);
-        setIsLoading(false);
+
+        calendarView.appendChild(dayDiv);
       }
-    };
-    
-    checkUser();
-    
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event);
-        if (event === 'SIGNED_IN' && session?.user) {
-          console.log('User signed in:', session.user);
-          setUser(session.user);
-          loadTips(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
-          setUser(null);
-          setTips([]);
-        }
-      }
-    );
-    
-    return () => {
-      subscription.unsubscribe();
-    };
+    }
+
+    // Navigate to previous month
+    function prevMonth() {
+      currentMonth.setMonth(currentMonth.getMonth() - 1);
+      renderCalendar();
+    }
+
+    // Navigate to next month
+    function nextMonth() {
+      currentMonth.setMonth(currentMonth.getMonth() + 1);
+      renderCalendar();
+    }
   }, []);
-  
-  // Generate calendar days when month changes or tips are loaded
-  useEffect(() => {
-    generateCalendarDays();
-  }, [currentMonth, tips]);
-  
-  // Function to load tips from Supabase
-  const loadTips = async (userId) => {
-    if (!userId) {
-      console.error('No user ID provided to loadTips');
-      setIsLoading(false);
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      console.log('Loading tips for user:', userId);
-      const { data, error } = await getUserTips(userId);
-      
-      if (error) {
-        console.error('Error loading tips:', error);
-        toast({
-          title: 'Error loading tips',
-          description: error.message || 'Please try again',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        console.log('Tips loaded:', data);
-        setTips(data || []);
-      }
-    } catch (err) {
-      console.error('Unexpected error loading tips:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to load your tips. Please try again.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Generate calendar days for the current month
-  const generateCalendarDays = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    const days = [];
-    
-    // Add day labels
-    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    daysOfWeek.forEach(day => {
-      days.push({
-        type: 'label',
-        text: day
-      });
-    });
-    
-    // Add empty slots for days before the 1st
-    for (let i = 0; i < firstDay; i++) {
-      days.push({
-        type: 'empty'
-      });
-    }
-    
-    // Add days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayTips = tips.filter(tip => tip.date === dateStr);
-      
-      let tipTotal = 0;
-      if (dayTips.length > 0) {
-        tipTotal = dayTips.reduce((sum, tip) => sum + Number(tip.amount), 0);
-      }
-      
-      days.push({
-        type: 'day',
-        day: day,
-        date: dateStr,
-        hasTip: dayTips.length > 0,
-        tipAmount: tipTotal
-      });
-    }
-    
-    setCalendarDays(days);
-  };
-  
-  // Handle day click on calendar
-  const handleDayClick = (date) => {
-    setTipDate(date);
-    setTipAmount('');
-    
-    // Focus the tip input after a short delay
-    setTimeout(() => {
-      if (tipInputRef.current) {
-        tipInputRef.current.focus();
-      }
-    }, 100);
-  };
-  
-  // Handle previous month
-  const handlePrevMonth = () => {
-    const prevMonth = new Date(currentMonth);
-    prevMonth.setMonth(prevMonth.getMonth() - 1);
-    setCurrentMonth(prevMonth);
-  };
-  
-  // Handle next month
-  const handleNextMonth = () => {
-    const nextMonth = new Date(currentMonth);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    setCurrentMonth(nextMonth);
-  };
-  
-  // Handle direct tip save
-  const handleSaveTip = async (e) => {
-    e.preventDefault();
-    
-    if (!tipAmount || isNaN(Number(tipAmount)) || Number(tipAmount) <= 0) {
-      toast({
-        title: 'Invalid amount',
-        description: 'Please enter a valid tip amount',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-    
-    if (!tipDate) {
-      toast({
-        title: 'No date selected',
-        description: 'Please select a date',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-    
-    setIsSaving(true);
-    
-    try {
-      console.log('Saving tip:', { userId: user.id, date: tipDate, amount: tipAmount });
-      
-      const { error } = await addTip(user.id, tipDate, tipAmount);
-      
-      if (error) {
-        console.error('Error saving tip:', error);
-        toast({
-          title: 'Error saving tip',
-          description: error.message || 'Please try again',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        toast({
-          title: 'Tip saved!',
-          description: `$${tipAmount} has been saved for ${new Date(tipDate).toLocaleDateString()}`,
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-        
-        // Clear input and reload tips
-        setTipAmount('');
-        if (user) {
-          loadTips(user.id);
-        }
-      }
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      toast({
-        title: 'Unexpected error',
-        description: err.message || 'Please try again',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  
-  // Handle sign out
-  const handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      toast({
-        title: 'Signed out',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-    } catch (err) {
-      console.error('Error signing out:', err);
-    }
-  };
-  
-  // Handle demo login - for website
-  const handleDemoLogin = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Create a random demo account for testing
-      const demoEmail = `demo${Math.floor(Math.random() * 10000)}@example.com`;
-      const demoPassword = 'password123';
-      
-      console.log('Creating demo account:', demoEmail);
-      
-      // Sign up with Supabase
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: demoEmail,
-        password: demoPassword
-      });
-      
-      if (signUpError) {
-        console.error('Demo signup error:', signUpError);
-        toast({
-          title: 'Error creating demo account',
-          description: signUpError.message,
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log('Demo signup response:', signUpData);
-      
-      // If we got a session, we're already logged in
-      if (signUpData.session) {
-        console.log('Demo account created and logged in:', signUpData.user);
-        toast({
-          title: 'Demo account created',
-          description: 'You are now logged in with a demo account',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-        return;
-      }
-      
-      // Otherwise, try to sign in with the demo credentials
-      console.log('Signing in with demo account');
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: demoEmail,
-        password: demoPassword
-      });
-      
-      if (signInError) {
-        console.error('Demo login error:', signInError);
-        toast({
-          title: 'Login failed',
-          description: signInError.message,
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        console.log('Demo login successful:', signInData);
-        toast({
-          title: 'Logged in',
-          description: 'You are now logged in with a demo account',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    } catch (err) {
-      console.error('Unexpected error during demo login:', err);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Don't render during SSR for Next.js
-  if (!isBrowser()) {
-    return null;
-  }
-  
-  if (isLoading) {
-    return (
-      <Center h="100vh">
-        <Spinner size="xl" />
-      </Center>
-    );
-  }
-  
-  if (!user) {
-    return (
-      <Container maxW="container.md" py={8}>
-        <VStack spacing={6} align="stretch">
-          <Heading as="h1" size="xl" textAlign="center">
-            Tip Tracker
-          </Heading>
-          
-          <Alert status="info" borderRadius="md">
-            <AlertIcon />
-            <Box>
-              <AlertTitle>Welcome to Tip Tracker</AlertTitle>
-              <AlertDescription>
-                Click the button below to create a demo account and start tracking your tips.
-              </AlertDescription>
-            </Box>
-          </Alert>
-          
-          <Button 
-            colorScheme="blue" 
-            onClick={handleDemoLogin}
-            size="lg"
-            mx="auto"
-            display="block"
-            width="200px"
-            isLoading={isLoading}
-          >
-            Create Demo Account
-          </Button>
-        </VStack>
-      </Container>
-    );
-  }
-  
-  // Format month name
-  const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
-  
+
   return (
-    <Box 
-      fontFamily="'Segoe UI', Arial, sans-serif"
-      backgroundColor="#1a1a1a"
-      color="#e0e0e0"
-      maxWidth="900px"
-      margin="20px auto"
-      padding="20px"
-    >
-      <VStack spacing={6} align="stretch">
-        <HStack justify="space-between">
-          <Heading as="h1" size="xl" color="#aaffaa">
-            Tip Tracker
-          </Heading>
-          
-          <Button 
-            backgroundColor="#4CAF50"
-            color="#e0e0e0"
-            _hover={{ backgroundColor: "#45a049" }}
-            size="sm"
-            onClick={handleSignOut}
-          >
-            Sign Out
-          </Button>
-        </HStack>
-        
-        <Grid templateColumns={{ base: "1fr", md: "1fr" }} gap={5}>
-          {/* Input Section */}
-          <Box
-            backgroundColor="#2a2a2a"
-            border="1px solid #4d4d4d"
-            padding="20px"
-            borderRadius="8px"
-            boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
-          >
-            <Heading as="h2" size="md" color="#aaffaa" mb={4}>
-              Tip Tracker
-            </Heading>
-            
-            <form onSubmit={handleSaveTip}>
-              <HStack spacing={4} wrap="wrap">
-                <Input
-                  type="date"
-                  value={tipDate}
-                  onChange={(e) => setTipDate(e.target.value)}
-                  required
-                  backgroundColor="#333"
-                  border="1px solid #4d4d4d"
-                  color="#e0e0e0"
-                  _focus={{
-                    outline: "none",
-                    borderColor: "#aaffaa",
-                    boxShadow: "0 0 5px rgba(170, 255, 170, 0.5)"
-                  }}
-                  width={{ base: "100%", md: "auto" }}
-                />
-                
-                <Input
-                  ref={tipInputRef}
-                  type="number"
-                  value={tipAmount}
-                  onChange={(e) => setTipAmount(e.target.value)}
-                  placeholder="Enter tip amount"
-                  step="0.01"
-                  min="0"
-                  required
-                  backgroundColor="#333"
-                  border="1px solid #4d4d4d"
-                  color="#e0e0e0"
-                  _focus={{
-                    outline: "none",
-                    borderColor: "#aaffaa",
-                    boxShadow: "0 0 5px rgba(170, 255, 170, 0.5)"
-                  }}
-                  width={{ base: "100%", md: "auto" }}
-                />
-                
-                <Button
-                  type="submit"
-                  backgroundColor="#4CAF50"
-                  color="#e0e0e0"
-                  border="none"
-                  _hover={{ backgroundColor: "#45a049" }}
-                  isLoading={isSaving}
-                  width={{ base: "100%", md: "auto" }}
-                >
-                  Add Tip
-                </Button>
-              </HStack>
-            </form>
-          </Box>
-          
-          {/* Tip List */}
-          <Box
-            backgroundColor="#2a2a2a"
-            border="1px solid #4d4d4d"
-            padding="20px"
-            borderRadius="8px"
-            boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
-          >
-            <Heading as="h3" size="md" color="#aaffaa" mb={4}>
-              Tip History
-            </Heading>
-            
-            {tips.length > 0 ? (
-              <List spacing={2}>
-                {[...tips]
-                  .sort((a, b) => new Date(b.date) - new Date(a.date))
-                  .slice(0, 10)
-                  .map((tip, index) => (
-                    <ListItem 
-                      key={index} 
-                      padding="8px 0"
-                      borderBottom="1px solid #4d4d4d"
-                    >
-                      {new Date(tip.date).toLocaleDateString()}: ${Number(tip.amount).toFixed(2)}
-                    </ListItem>
-                  ))
-                }
-              </List>
-            ) : (
-              <Text>No tips recorded yet</Text>
-            )}
-          </Box>
-          
-          {/* Calendar View */}
-          <Box
-            backgroundColor="#2a2a2a"
-            border="1px solid #4d4d4d"
-            padding="20px"
-            borderRadius="8px"
-            boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
-          >
-            <HStack justify="space-between" mb={4}>
-              <Button
-                onClick={handlePrevMonth}
-                backgroundColor="#333"
-                color="#e0e0e0"
-                _hover={{ backgroundColor: "#444" }}
-                size="sm"
-              >
-                &lt; Prev
-              </Button>
-              
-              <Heading as="h3" size="md" color="#aaffaa">
-                {monthName}
-              </Heading>
-              
-              <Button
-                onClick={handleNextMonth}
-                backgroundColor="#333"
-                color="#e0e0e0"
-                _hover={{ backgroundColor: "#444" }}
-                size="sm"
-              >
-                Next &gt;
-              </Button>
-            </HStack>
-            
-            <Grid
-              templateColumns="repeat(7, 1fr)"
-              gap="8px"
-              textAlign="center"
-            >
-              {calendarDays.map((day, index) => {
-                if (day.type === 'label') {
-                  return (
-                    <Box
-                      key={index}
-                      fontWeight="bold"
-                      color="#aaffaa"
-                      p={2}
-                    >
-                      {day.text}
-                    </Box>
-                  );
-                } else if (day.type === 'empty') {
-                  return (
-                    <Box
-                      key={index}
-                      padding="10px"
-                      backgroundColor="#333"
-                      border="1px solid #4d4d4d"
-                      borderRadius="6px"
-                      position="relative"
-                      minHeight="60px"
-                    />
-                  );
-                } else {
-                  return (
-                    <Box
-                      key={index}
-                      padding="10px"
-                      backgroundColor={day.hasTip ? "#3a4d3a" : "#333"}
-                      border="1px solid #4d4d4d"
-                      borderRadius="6px"
-                      position="relative"
-                      minHeight="60px"
-                      transition="transform 0.2s ease, background-color 0.3s ease"
-                      _hover={{
-                        transform: "scale(1.05)",
-                        backgroundColor: "#444"
-                      }}
-                      onClick={() => handleDayClick(day.date)}
-                      cursor="pointer"
-                    >
-                      <Text>{day.day}</Text>
-                      
-                      {day.hasTip && (
-                        <Text
-                          fontSize="11px"
-                          color="#aaffaa"
-                          fontWeight="500"
-                          marginTop="5px"
-                          display="block"
-                          background="rgba(0, 0, 0, 0.6)"
-                          borderRadius="4px"
-                          padding="2px 6px"
-                        >
-                          ${day.tipAmount.toFixed(2)}
-                        </Text>
-                      )}
-                    </Box>
-                  );
-                }
-              })}
-            </Grid>
-          </Box>
-        </Grid>
-      </VStack>
+    <Box bg="#1a1a1a" minH="100vh" py={8}>
+      <Heading as="h1" size="xl" textAlign="center" color="#aaffaa" mb={6}>
+        Tip Tracker
+      </Heading>
+      <div id="tip-tracker-container"></div>
     </Box>
   );
 } 
