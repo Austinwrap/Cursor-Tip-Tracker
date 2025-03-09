@@ -49,12 +49,13 @@ const Header: React.FC = () => {
                 Analytics
                 {!isPaid && <span className="ml-1 text-teal-500 text-xs">★</span>}
               </Link>
-              {isPaid && (
-                <Link href="/premium-dashboard" className="text-teal-400 hover:text-teal-300 transition-colors text-sm uppercase tracking-wider">
-                  Premium
-                </Link>
-              )}
-              {!isPaid && (
+              {isPaid ? (
+                <>
+                  <Link href="/premium" className="text-teal-400 hover:text-teal-300 transition-colors text-sm uppercase tracking-wider">
+                    Premium
+                  </Link>
+                </>
+              ) : (
                 <Link href="/upgrade" className="text-teal-400 hover:text-teal-300 transition-colors text-sm uppercase tracking-wider">
                   Upgrade
                 </Link>
@@ -129,7 +130,7 @@ const Header: React.FC = () => {
               </Link>
               {isPaid ? (
                 <Link 
-                  href="/premium-dashboard" 
+                  href="/premium" 
                   className="text-black font-bold py-3 px-3 rounded-md bg-gradient-to-r from-teal-500 to-teal-600 flex items-center justify-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >

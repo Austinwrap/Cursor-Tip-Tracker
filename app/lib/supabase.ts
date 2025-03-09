@@ -372,4 +372,45 @@ export const getProjectedEarnings = async (userId: string, days: number): Promis
   }
 };
 
+// Add this function to check premium features status
+export async function getUserPremiumStatus(userId: string): Promise<{
+  isPaid: boolean;
+  planType: string;
+  premiumFeaturesEnabled: boolean;
+  subscriptionStatus: string;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('is_paid, plan_type, premium_features_enabled, subscription_status, subscription_type')
+      .eq('id', userId)
+      .single();
+    
+    if (error) {
+      console.error('Error getting user premium status:', error);
+      return {
+        isPaid: false,
+        planType: '',
+        premiumFeaturesEnabled: false,
+        subscriptionStatus: ''
+      };
+    }
+    
+    return {
+      isPaid: data.is_paid || false,
+      planType: data.plan_type || 'starter',
+      premiumFeaturesEnabled: data.premium_features_enabled || false,
+      subscriptionStatus: data.subscription_status || ''
+    };
+  } catch (error) {
+    console.error('Error in getUserPremiumStatus:', error);
+    return {
+      isPaid: false,
+      planType: '',
+      premiumFeaturesEnabled: false,
+      subscriptionStatus: ''
+    };
+  }
+}
+
 export default supabase; 
