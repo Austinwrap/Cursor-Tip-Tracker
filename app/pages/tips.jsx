@@ -3,8 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { supabase, addTip, getUserTips, isBrowser } from '../lib/supabaseClient';
-import Calendar from 'react-calendar';
-import TipEntryModal from '../components/TipEntryModal';
 import { 
   Box, 
   Container, 
@@ -25,17 +23,10 @@ import {
   FormLabel,
   Grid,
   GridItem,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
   Flex,
-  Divider,
   List,
   ListItem
 } from '@chakra-ui/react';
-import 'react-calendar/dist/Calendar.css';
-import '../styles/calendar-custom.css';
 
 export default function TipsPage() {
   const [user, setUser] = useState(null);
@@ -44,16 +35,14 @@ export default function TipsPage() {
   
   const [tips, setTips] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tipDate, setTipDate] = useState(new Date().toISOString().split('T')[0]);
   const [tipAmount, setTipAmount] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const tipInputRef = useRef(null);
   
-  // Stats
-  const [totalTips, setTotalTips] = useState(0);
-  const [averageTip, setAverageTip] = useState(0);
-  const [recentTips, setRecentTips] = useState([]);
+  // Calendar state
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [calendarDays, setCalendarDays] = useState([]);
   
   // Check if user is logged in - for website
   useEffect(() => {
@@ -102,6 +91,11 @@ export default function TipsPage() {
     };
   }, []);
   
+  // Generate calendar days when month changes or tips are loaded
+  useEffect(() => {
+    generateCalendarDays();
+  }, [currentMonth, tips]);
+  
   // Function to load tips from Supabase
   const loadTips = async (userId) => {
     if (!userId) {
@@ -128,20 +122,6 @@ export default function TipsPage() {
       } else {
         console.log('Tips loaded:', data);
         setTips(data || []);
-        
-        // Calculate stats
-        if (data && data.length > 0) {
-          // Total tips
-          const total = data.reduce((sum, tip) => sum + Number(tip.amount), 0);
-          setTotalTips(total);
-          
-          // Average tip
-          setAverageTip(total / data.length);
-          
-          // Recent tips (last 5)
-          const sortedTips = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
-          setRecentTips(sortedTips.slice(0, 5));
-        }
       }
     } catch (err) {
       console.error('Unexpected error loading tips:', err);
@@ -157,12 +137,59 @@ export default function TipsPage() {
     }
   };
   
+  // Generate calendar days for the current month
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const days = [];
+    
+    // Add day labels
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    daysOfWeek.forEach(day => {
+      days.push({
+        type: 'label',
+        text: day
+      });
+    });
+    
+    // Add empty slots for days before the 1st
+    for (let i = 0; i < firstDay; i++) {
+      days.push({
+        type: 'empty'
+      });
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayTips = tips.filter(tip => tip.date === dateStr);
+      
+      let tipTotal = 0;
+      if (dayTips.length > 0) {
+        tipTotal = dayTips.reduce((sum, tip) => sum + Number(tip.amount), 0);
+      }
+      
+      days.push({
+        type: 'day',
+        day: day,
+        date: dateStr,
+        hasTip: dayTips.length > 0,
+        tipAmount: tipTotal
+      });
+    }
+    
+    setCalendarDays(days);
+  };
+  
   // Handle day click on calendar
   const handleDayClick = (date) => {
-    setSelectedDate(date);
-    setTipAmount(''); // Clear previous amount
+    setTipDate(date);
+    setTipAmount('');
     
-    // Focus the tip input after a short delay to allow UI to update
+    // Focus the tip input after a short delay
     setTimeout(() => {
       if (tipInputRef.current) {
         tipInputRef.current.focus();
@@ -170,21 +197,18 @@ export default function TipsPage() {
     }, 100);
   };
   
-  // Handle modal open
-  const handleOpenModal = () => {
-    setIsModalOpen(true);
+  // Handle previous month
+  const handlePrevMonth = () => {
+    const prevMonth = new Date(currentMonth);
+    prevMonth.setMonth(prevMonth.getMonth() - 1);
+    setCurrentMonth(prevMonth);
   };
   
-  // Handle modal close
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-  
-  // Handle tip saved
-  const handleTipSaved = () => {
-    if (user) {
-      loadTips(user.id); // Reload tips after saving
-    }
+  // Handle next month
+  const handleNextMonth = () => {
+    const nextMonth = new Date(currentMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    setCurrentMonth(nextMonth);
   };
   
   // Handle direct tip save
@@ -202,10 +226,10 @@ export default function TipsPage() {
       return;
     }
     
-    if (!selectedDate) {
+    if (!tipDate) {
       toast({
         title: 'No date selected',
-        description: 'Please select a date on the calendar',
+        description: 'Please select a date',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -216,13 +240,9 @@ export default function TipsPage() {
     setIsSaving(true);
     
     try {
-      const formattedDate = selectedDate instanceof Date 
-        ? selectedDate.toISOString().split('T')[0] 
-        : selectedDate;
+      console.log('Saving tip:', { userId: user.id, date: tipDate, amount: tipAmount });
       
-      console.log('Saving tip:', { userId: user.id, date: formattedDate, amount: tipAmount });
-      
-      const { error } = await addTip(user.id, formattedDate, tipAmount);
+      const { error } = await addTip(user.id, tipDate, tipAmount);
       
       if (error) {
         console.error('Error saving tip:', error);
@@ -236,7 +256,7 @@ export default function TipsPage() {
       } else {
         toast({
           title: 'Tip saved!',
-          description: `$${tipAmount} has been saved for ${selectedDate.toLocaleDateString()}`,
+          description: `$${tipAmount} has been saved for ${new Date(tipDate).toLocaleDateString()}`,
           status: 'success',
           duration: 3000,
           isClosable: true,
@@ -244,7 +264,9 @@ export default function TipsPage() {
         
         // Clear input and reload tips
         setTipAmount('');
-        handleTipSaved();
+        if (user) {
+          loadTips(user.id);
+        }
       }
     } catch (err) {
       console.error('Unexpected error:', err);
@@ -258,35 +280,6 @@ export default function TipsPage() {
     } finally {
       setIsSaving(false);
     }
-  };
-  
-  // Function to get tip amount for a specific date
-  const getTipForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    const tip = tips.find(t => t.date === dateStr);
-    return tip ? tip.amount : null;
-  };
-  
-  // Custom tile content for calendar
-  const tileContent = ({ date, view }) => {
-    if (view !== 'month') return null;
-    
-    const amount = getTipForDate(date);
-    if (!amount) return null;
-    
-    return (
-      <div style={{ 
-        fontSize: '0.8em', 
-        padding: '2px', 
-        backgroundColor: '#3a4d3a', 
-        color: '#aaffaa',
-        borderRadius: '4px',
-        marginTop: '2px',
-        fontWeight: '500'
-      }}>
-        ${Number(amount).toFixed(2)}
-      </div>
-    );
   };
   
   // Handle sign out
@@ -436,8 +429,18 @@ export default function TipsPage() {
     );
   }
   
+  // Format month name
+  const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+  
   return (
-    <Container maxW="container.xl" py={8} bg="#1a1a1a" color="#e0e0e0">
+    <Box 
+      fontFamily="'Segoe UI', Arial, sans-serif"
+      backgroundColor="#1a1a1a"
+      color="#e0e0e0"
+      maxWidth="900px"
+      margin="20px auto"
+      padding="20px"
+    >
       <VStack spacing={6} align="stretch">
         <HStack justify="space-between">
           <Heading as="h1" size="xl" color="#aaffaa">
@@ -445,8 +448,9 @@ export default function TipsPage() {
           </Heading>
           
           <Button 
-            colorScheme="red" 
-            variant="outline" 
+            backgroundColor="#4CAF50"
+            color="#e0e0e0"
+            _hover={{ backgroundColor: "#45a049" }}
             size="sm"
             onClick={handleSignOut}
           >
@@ -454,162 +458,210 @@ export default function TipsPage() {
           </Button>
         </HStack>
         
-        <Grid templateColumns={{ base: "1fr", md: "2fr 1fr" }} gap={6}>
-          {/* Left Column - Calendar and Tip Entry */}
-          <GridItem>
-            <VStack spacing={4} align="stretch">
-              <Box 
-                borderWidth="1px" 
-                borderRadius="lg" 
-                p={4} 
-                boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
-                bg="#2a2a2a"
-                borderColor="#4d4d4d"
-              >
-                <Calendar 
-                  onClickDay={handleDayClick}
-                  tileContent={tileContent}
-                  className="react-calendar"
-                  value={selectedDate}
+        <Grid templateColumns={{ base: "1fr", md: "1fr" }} gap={5}>
+          {/* Input Section */}
+          <Box
+            backgroundColor="#2a2a2a"
+            border="1px solid #4d4d4d"
+            padding="20px"
+            borderRadius="8px"
+            boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
+          >
+            <Heading as="h2" size="md" color="#aaffaa" mb={4}>
+              Tip Tracker
+            </Heading>
+            
+            <form onSubmit={handleSaveTip}>
+              <HStack spacing={4} wrap="wrap">
+                <Input
+                  type="date"
+                  value={tipDate}
+                  onChange={(e) => setTipDate(e.target.value)}
+                  required
+                  backgroundColor="#333"
+                  border="1px solid #4d4d4d"
+                  color="#e0e0e0"
+                  _focus={{
+                    outline: "none",
+                    borderColor: "#aaffaa",
+                    boxShadow: "0 0 5px rgba(170, 255, 170, 0.5)"
+                  }}
+                  width={{ base: "100%", md: "auto" }}
                 />
-              </Box>
-              
-              <Box 
-                borderWidth="1px" 
-                borderRadius="lg" 
-                p={4} 
-                boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
-                bg="#2a2a2a"
-                borderColor="#4d4d4d"
-              >
-                <form onSubmit={handleSaveTip}>
-                  <VStack spacing={4}>
-                    <Heading size="md" color="#aaffaa">
-                      Add Tip for {selectedDate.toLocaleDateString()}
-                    </Heading>
-                    
-                    <HStack width="100%">
-                      <FormControl isRequired>
-                        <Input
-                          ref={tipInputRef}
-                          type="number"
-                          value={tipAmount}
-                          onChange={(e) => setTipAmount(e.target.value)}
-                          placeholder="Enter tip amount"
-                          min="0"
-                          step="0.01"
-                          bg="#333"
-                          borderColor="#4d4d4d"
-                          _hover={{ borderColor: "#aaffaa" }}
-                          _focus={{ borderColor: "#aaffaa", boxShadow: "0 0 0 1px #aaffaa" }}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              handleSaveTip(e);
-                            }
-                          }}
-                        />
-                      </FormControl>
-                      
-                      <Button 
-                        colorScheme="green" 
-                        type="submit" 
-                        isLoading={isSaving}
-                        bg="#4CAF50"
-                        _hover={{ bg: "#45a049" }}
-                      >
-                        Save Tip
-                      </Button>
-                    </HStack>
-                    
-                    <Text fontSize="sm" color="#aaffaa">
-                      Click on any day in the calendar to select a different date
-                    </Text>
-                  </VStack>
-                </form>
-              </Box>
-            </VStack>
-          </GridItem>
+                
+                <Input
+                  ref={tipInputRef}
+                  type="number"
+                  value={tipAmount}
+                  onChange={(e) => setTipAmount(e.target.value)}
+                  placeholder="Enter tip amount"
+                  step="0.01"
+                  min="0"
+                  required
+                  backgroundColor="#333"
+                  border="1px solid #4d4d4d"
+                  color="#e0e0e0"
+                  _focus={{
+                    outline: "none",
+                    borderColor: "#aaffaa",
+                    boxShadow: "0 0 5px rgba(170, 255, 170, 0.5)"
+                  }}
+                  width={{ base: "100%", md: "auto" }}
+                />
+                
+                <Button
+                  type="submit"
+                  backgroundColor="#4CAF50"
+                  color="#e0e0e0"
+                  border="none"
+                  _hover={{ backgroundColor: "#45a049" }}
+                  isLoading={isSaving}
+                  width={{ base: "100%", md: "auto" }}
+                >
+                  Add Tip
+                </Button>
+              </HStack>
+            </form>
+          </Box>
           
-          {/* Right Column - Stats and Recent Tips */}
-          <GridItem>
-            <VStack spacing={4} align="stretch">
-              <Box 
-                borderWidth="1px" 
-                borderRadius="lg" 
-                p={4} 
-                boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
-                bg="#2a2a2a"
-                borderColor="#4d4d4d"
+          {/* Tip List */}
+          <Box
+            backgroundColor="#2a2a2a"
+            border="1px solid #4d4d4d"
+            padding="20px"
+            borderRadius="8px"
+            boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
+          >
+            <Heading as="h3" size="md" color="#aaffaa" mb={4}>
+              Tip History
+            </Heading>
+            
+            {tips.length > 0 ? (
+              <List spacing={2}>
+                {[...tips]
+                  .sort((a, b) => new Date(b.date) - new Date(a.date))
+                  .slice(0, 10)
+                  .map((tip, index) => (
+                    <ListItem 
+                      key={index} 
+                      padding="8px 0"
+                      borderBottom="1px solid #4d4d4d"
+                    >
+                      {new Date(tip.date).toLocaleDateString()}: ${Number(tip.amount).toFixed(2)}
+                    </ListItem>
+                  ))
+                }
+              </List>
+            ) : (
+              <Text>No tips recorded yet</Text>
+            )}
+          </Box>
+          
+          {/* Calendar View */}
+          <Box
+            backgroundColor="#2a2a2a"
+            border="1px solid #4d4d4d"
+            padding="20px"
+            borderRadius="8px"
+            boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
+          >
+            <HStack justify="space-between" mb={4}>
+              <Button
+                onClick={handlePrevMonth}
+                backgroundColor="#333"
+                color="#e0e0e0"
+                _hover={{ backgroundColor: "#444" }}
+                size="sm"
               >
-                <Heading size="md" mb={4} color="#aaffaa">
-                  Your Tip Stats
-                </Heading>
-                
-                <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                  <Stat>
-                    <StatLabel color="#e0e0e0">Total Tips</StatLabel>
-                    <StatNumber color="#aaffaa">${totalTips.toFixed(2)}</StatNumber>
-                    <StatHelpText>{tips.length} entries</StatHelpText>
-                  </Stat>
-                  
-                  <Stat>
-                    <StatLabel color="#e0e0e0">Average Tip</StatLabel>
-                    <StatNumber color="#aaffaa">${averageTip.toFixed(2)}</StatNumber>
-                    <StatHelpText>per entry</StatHelpText>
-                  </Stat>
-                </Grid>
-              </Box>
-              
-              <Box 
-                borderWidth="1px" 
-                borderRadius="lg" 
-                p={4} 
-                boxShadow="0 2px 10px rgba(0, 0, 0, 0.5)"
-                bg="#2a2a2a"
-                borderColor="#4d4d4d"
-              >
-                <Heading size="md" mb={4} color="#aaffaa">
-                  Recent Tips
-                </Heading>
-                
-                {recentTips.length > 0 ? (
-                  <List spacing={2}>
-                    {recentTips.map((tip, index) => (
-                      <ListItem key={index} p={2} borderRadius="md" bg="#333">
-                        <Flex justify="space-between">
-                          <Text>{new Date(tip.date).toLocaleDateString()}</Text>
-                          <Text fontWeight="bold" color="#aaffaa">${Number(tip.amount).toFixed(2)}</Text>
-                        </Flex>
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Text>No tips recorded yet</Text>
-                )}
-              </Box>
-              
-              <Button 
-                colorScheme="blue" 
-                onClick={handleOpenModal}
-                bg="#4CAF50"
-                _hover={{ bg: "#45a049" }}
-              >
-                Advanced Tip Entry
+                &lt; Prev
               </Button>
-            </VStack>
-          </GridItem>
+              
+              <Heading as="h3" size="md" color="#aaffaa">
+                {monthName}
+              </Heading>
+              
+              <Button
+                onClick={handleNextMonth}
+                backgroundColor="#333"
+                color="#e0e0e0"
+                _hover={{ backgroundColor: "#444" }}
+                size="sm"
+              >
+                Next &gt;
+              </Button>
+            </HStack>
+            
+            <Grid
+              templateColumns="repeat(7, 1fr)"
+              gap="8px"
+              textAlign="center"
+            >
+              {calendarDays.map((day, index) => {
+                if (day.type === 'label') {
+                  return (
+                    <Box
+                      key={index}
+                      fontWeight="bold"
+                      color="#aaffaa"
+                      p={2}
+                    >
+                      {day.text}
+                    </Box>
+                  );
+                } else if (day.type === 'empty') {
+                  return (
+                    <Box
+                      key={index}
+                      padding="10px"
+                      backgroundColor="#333"
+                      border="1px solid #4d4d4d"
+                      borderRadius="6px"
+                      position="relative"
+                      minHeight="60px"
+                    />
+                  );
+                } else {
+                  return (
+                    <Box
+                      key={index}
+                      padding="10px"
+                      backgroundColor={day.hasTip ? "#3a4d3a" : "#333"}
+                      border="1px solid #4d4d4d"
+                      borderRadius="6px"
+                      position="relative"
+                      minHeight="60px"
+                      transition="transform 0.2s ease, background-color 0.3s ease"
+                      _hover={{
+                        transform: "scale(1.05)",
+                        backgroundColor: "#444"
+                      }}
+                      onClick={() => handleDayClick(day.date)}
+                      cursor="pointer"
+                    >
+                      <Text>{day.day}</Text>
+                      
+                      {day.hasTip && (
+                        <Text
+                          fontSize="11px"
+                          color="#aaffaa"
+                          fontWeight="500"
+                          marginTop="5px"
+                          display="block"
+                          background="rgba(0, 0, 0, 0.6)"
+                          borderRadius="4px"
+                          padding="2px 6px"
+                        >
+                          ${day.tipAmount.toFixed(2)}
+                        </Text>
+                      )}
+                    </Box>
+                  );
+                }
+              })}
+            </Grid>
+          </Box>
         </Grid>
       </VStack>
-      
-      {isModalOpen && (
-        <TipEntryModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          date={selectedDate}
-          userId={user.id}
-          onTipSaved={handleTipSaved}
-        />
-      )}
-    </Container>
+    </Box>
   );
 } 
