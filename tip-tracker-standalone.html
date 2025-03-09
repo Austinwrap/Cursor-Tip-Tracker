@@ -6,127 +6,207 @@
     <title>Tip Tracker</title>
     <style>
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #1a1a1a;
-            color: #e0e0e0;
-            max-width: 900px;
-            margin: 20px auto;
-            padding: 20px;
+            font-family: 'Inter', Arial, sans-serif;
+            background: #0a0a0a;
+            color: #c8c8c8;
+            margin: 0;
+            padding: 10px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
         }
         .container {
+            width: 100%;
+            max-width: 600px;
             display: grid;
-            gap: 20px;
+            gap: 10px;
+        }
+        .input-section, .totals-section, .tip-list, .calendar-view {
+            background: linear-gradient(145deg, #141414, #1c1c1c);
+            border: 1px solid #88eaff;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(136, 234, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .input-section::before, .totals-section::before, .tip-list::before, .calendar-view::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, rgba(136, 234, 255, 0.05), rgba(136, 234, 255, 0));
+            pointer-events: none;
         }
         .input-section {
-            background-color: #2a2a2a;
-            border: 1px solid #4d4d4d;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
         }
-        .tip-list, .calendar-view {
-            background-color: #2a2a2a;
-            border: 1px solid #4d4d4d;
-            padding: 20px;
+        .input-section input, .input-section button {
+            padding: 8px 12px;
+            border-radius: 25px;
+            border: 1px solid #88eaff;
+            background: #222222;
+            color: #c8c8c8;
+            font-size: 12px;
+            flex: 1;
+            min-width: 100px;
+            box-shadow: 0 2px 4px rgba(136, 234, 255, 0.2);
+            transition: box-shadow 0.3s ease;
+        }
+        .input-section input:focus, .input-section button:focus {
+            outline: none;
+            box-shadow: 0 0 6px rgba(136, 234, 255, 0.5);
+        }
+        .input-section button {
+            background: #00a3af;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.3s ease;
+            font-weight: 600;
+        }
+        .input-section button:hover, .input-section button:active {
+            background: #008c96;
+            transform: scale(0.9);
+        }
+        .totals-section {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            gap: 8px;
+        }
+        .totals-section div {
+            background: #1a1a1a;
+            padding: 8px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            flex: 1;
+            text-align: center;
+            border: 1px solid #88eaff;
+            box-shadow: 0 2px 4px rgba(136, 234, 255, 0.1);
+        }
+        .tip-list ul {
+            list-style: none;
+            padding: 0;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .tip-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #3a3a3a;
+            font-size: 11px;
+        }
+        .tip-list button {
+            background: none;
+            border: 1px solid #ff5555;
+            color: #ff5555;
+            cursor: pointer;
+            font-size: 10px;
+            padding: 4px 6px;
+            border-radius: 15px;
+            transition: background 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 4px rgba(255, 85, 85, 0.2);
+        }
+        .tip-list button:hover, .tip-list button:active {
+            background: #ff5555;
+            color: #000;
+            transform: scale(0.9);
         }
         .calendar-view {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
+            gap: 3px;
             text-align: center;
         }
         .calendar-day {
-            padding: 10px;
-            background-color: #333;
-            border: 1px solid #4d4d4d;
+            padding: 6px;
+            background: #1e1e1e;
+            border: 1px solid #88eaff;
             border-radius: 6px;
-            position: relative;
-            min-height: 60px;
-            transition: transform 0.2s ease, background-color 0.3s ease;
+            min-height: 40px;
+            transition: background 0.3s ease, transform 0.2s ease;
+            cursor: pointer;
         }
         .calendar-day:hover {
-            transform: scale(1.05);
-            background-color: #444;
+            background: #282828;
+            transform: scale(1.02);
         }
         .calendar-day.has-tip {
-            background-color: #3a4d3a;
+            background: #2a3a2a;
         }
         .calendar-day .tip-text {
-            font-size: 11px;
-            color: #aaffaa;
+            font-size: 8px;
+            color: #b0ffb0;
             font-weight: 500;
-            margin-top: 5px;
+            margin-top: 4px;
             display: block;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.5);
             border-radius: 4px;
-            padding: 2px 6px;
-        }
-        input, button {
-            margin: 5px;
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #4d4d4d;
-            background-color: #333;
-            color: #e0e0e0;
-            font-size: 14px;
-        }
-        input:focus, button:focus {
-            outline: none;
-            border-color: #aaffaa;
-            box-shadow: 0 0 5px rgba(170, 255, 170, 0.5);
-        }
-        button {
-            background-color: #4CAF50;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-        li {
-            padding: 8px 0;
-            border-bottom: 1px solid #4d4d4d;
+            padding: 2px 4px;
         }
         h2, h3 {
-            margin-top: 0;
-            color: #aaffaa;
+            margin: 3px 0;
+            color: #00a3af;
+            font-size: 16px;
+            font-weight: 600;
         }
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: opacity 0.3s, transform 0.3s;
-            z-index: 1000;
+        .calendar-day span:first-child {
+            font-size: 10px;
+            font-weight: 500;
         }
-        .notification.success {
-            background-color: #4CAF50;
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        /* Responsive adjustments */
+        @media (max-width: 400px) {
+            .input-section {
+                flex-direction: column;
+            }
+            .input-section input, .input-section button {
+                width: 100%;
+                min-width: unset;
+                font-size: 11px;
+                padding: 7px 10px;
+            }
+            .totals-section {
+                flex-direction: column;
+                gap: 6px;
+            }
+            .calendar-day {
+                padding: 5px;
+                min-height: 35px;
+            }
+            .calendar-day span:first-child {
+                font-size: 9px;
+            }
+            .calendar-day .tip-text {
+                font-size: 7px;
+                padding: 1px 3px;
+            }
+            .tip-list ul {
+                max-height: 100px;
+            }
         }
-        .notification.error {
-            background-color: #f44336;
-            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
-        }
-        .notification.show {
-            opacity: 1;
-            transform: translateY(0);
+        @media (min-width: 800px) {
+            .container {
+                max-width: 700px;
+            }
+            .calendar-day {
+                padding: 8px;
+                min-height: 45px;
+            }
+            .input-section input, .input-section button {
+                font-size: 13px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="notification" class="notification"></div>
     <div class="container">
         <!-- Input Section -->
         <div class="input-section">
@@ -136,6 +216,12 @@
             <button onclick="addTip()">Add Tip</button>
         </div>
 
+        <!-- Totals Section -->
+        <div class="totals-section">
+            <div>Weekly Total: $<span id="weeklyTotal">0.00</span></div>
+            <div>Monthly Total: $<span id="monthlyTotal">0.00</span></div>
+        </div>
+
         <!-- List of Tips -->
         <div class="tip-list">
             <h3>Tip History</h3>
@@ -143,93 +229,77 @@
         </div>
 
         <!-- Calendar View -->
-        <div class="calendar-view" id="calendarView">
-            <!-- Calendar will be dynamically generated -->
-        </div>
+        <div class="calendar-view" id="calendarView"></div>
     </div>
 
     <script>
-        let tips = [];
-        
+        let tips = JSON.parse(localStorage.getItem('tips')) || [];
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
-            // Load tips from localStorage
-            try {
-                const savedTips = localStorage.getItem('tips');
-                if (savedTips) {
-                    tips = JSON.parse(savedTips);
-                }
-            } catch (error) {
-                console.error('Error loading tips:', error);
-                showNotification('Error loading saved tips. Starting fresh.', 'error');
-                // Reset tips if there's an error
-                tips = [];
-                localStorage.setItem('tips', JSON.stringify(tips));
-            }
-            
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('tipDate').value = today;
             renderTips();
             renderCalendar();
+            updateTotals();
         });
 
-        function showNotification(message, type) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = 'notification ' + type;
-            
-            // Add show class to trigger animation
-            setTimeout(() => {
-                notification.classList.add('show');
-            }, 10);
-            
-            // Hide after 3 seconds
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
+        function addTip() {
+            const date = document.getElementById('tipDate').value;
+            const amount = parseFloat(document.getElementById('tipAmount').value);
+
+            if (!date || isNaN(amount)) {
+                alert('Please enter a valid date and tip amount.');
+                return;
+            }
+
+            const tip = { date, amount };
+            tips.push(tip);
+            saveTips();
+            renderTips();
+            renderCalendar();
+            updateTotals();
+            document.getElementById('tipAmount').value = ''; // Clear input
         }
 
-        function addTip() {
-            try {
-                const date = document.getElementById('tipDate').value;
-                const amount = parseFloat(document.getElementById('tipAmount').value);
-
-                if (!date || isNaN(amount)) {
-                    showNotification('Please enter a valid date and tip amount.', 'error');
-                    return;
-                }
-
-                const tip = { date, amount };
-                tips.push(tip);
-                localStorage.setItem('tips', JSON.stringify(tips));
-                
+        function editTip(index) {
+            const newAmount = prompt('Enter new tip amount:', tips[index].amount);
+            if (newAmount && !isNaN(newAmount)) {
+                tips[index].amount = parseFloat(newAmount);
+                saveTips();
                 renderTips();
                 renderCalendar();
-                document.getElementById('tipAmount').value = ''; // Clear input
-                showNotification('Tip saved successfully!', 'success');
-            } catch (error) {
-                console.error('Error saving tip:', error);
-                showNotification('Failed to save tip. Please try again.', 'error');
+                updateTotals();
             }
+        }
+
+        function deleteTip(index) {
+            if (confirm('Are you sure you want to delete this tip?')) {
+                tips.splice(index, 1);
+                saveTips();
+                renderTips();
+                renderCalendar();
+                updateTotals();
+            }
+        }
+
+        function saveTips() {
+            localStorage.setItem('tips', JSON.stringify(tips));
         }
 
         function renderTips() {
             const tipList = document.getElementById('tipList');
             tipList.innerHTML = '';
-            
-            if (tips.length === 0) {
-                const emptyMessage = document.createElement('li');
-                emptyMessage.textContent = 'No tips recorded yet. Add your first tip above!';
-                emptyMessage.style.color = '#999';
-                emptyMessage.style.fontStyle = 'italic';
-                tipList.appendChild(emptyMessage);
-                return;
-            }
-            
-            tips.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
-            tips.forEach(tip => {
+            tips.sort((a, b) => new Date(b.date) - new Date(a.date));
+            tips.forEach((tip, index) => {
                 const li = document.createElement('li');
-                li.textContent = `${tip.date}: $${tip.amount.toFixed(2)}`;
+                li.innerHTML = `
+                    ${tip.date}: $${tip.amount.toFixed(2)}
+                    <span>
+                        <button onclick="editTip(${index})">Edit</button>
+                        <button onclick="deleteTip(${index})">Delete</button>
+                    </span>
+                `;
                 tipList.appendChild(li);
             });
         }
@@ -238,36 +308,34 @@
             const calendarView = document.getElementById('calendarView');
             calendarView.innerHTML = '';
 
-            // Create simple calendar for current month
             const today = new Date();
             const year = today.getFullYear();
             const month = today.getMonth();
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-            // Add day labels
             const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             daysOfWeek.forEach(day => {
                 const dayLabel = document.createElement('div');
                 dayLabel.textContent = day;
-                dayLabel.style.fontWeight = 'bold';
-                dayLabel.style.color = '#aaffaa';
+                dayLabel.style.fontWeight = '600';
+                dayLabel.style.color = '#00a3af';
+                dayLabel.style.fontSize = '10px';
                 calendarView.appendChild(dayLabel);
             });
 
-            // Add empty slots for days before the 1st
             for (let i = 0; i < firstDay; i++) {
                 const emptyDay = document.createElement('div');
                 emptyDay.className = 'calendar-day';
                 calendarView.appendChild(emptyDay);
             }
 
-            // Add days of the month
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'calendar-day';
-                dayDiv.onclick = function() {
+                dayDiv.dataset.date = dateStr;
+                dayDiv.onclick = () => {
                     document.getElementById('tipDate').value = dateStr;
                     document.getElementById('tipAmount').focus();
                 };
@@ -275,7 +343,6 @@
                 dayNum.textContent = day;
                 dayDiv.appendChild(dayNum);
 
-                // Highlight days with tips and show total
                 const dayTips = tips.filter(tip => tip.date === dateStr);
                 if (dayTips.length > 0) {
                     dayDiv.classList.add('has-tip');
@@ -288,6 +355,23 @@
 
                 calendarView.appendChild(dayDiv);
             }
+        }
+
+        function updateTotals() {
+            const today = new Date();
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            const weeklyTotal = tips
+                .filter(tip => new Date(tip.date) >= weekStart)
+                .reduce((sum, tip) => sum + tip.amount, 0);
+            const monthlyTotal = tips
+                .filter(tip => new Date(tip.date) >= monthStart)
+                .reduce((sum, tip) => sum + tip.amount, 0);
+
+            document.getElementById('weeklyTotal').textContent = weeklyTotal.toFixed(2);
+            document.getElementById('monthlyTotal').textContent = monthlyTotal.toFixed(2);
         }
     </script>
 </body>
