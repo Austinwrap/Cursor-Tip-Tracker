@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../components/Header';
 import { useAuth } from '../lib/AuthContext';
+import { supabase, addTip as saveTipToSupabase, getTips as getSupabaseTips, deleteTip as deleteSupabaseTip } from '../lib/supabase';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -15,6 +16,8 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [tipDate, setTipDate] = useState<string>('');
   const [tipAmount, setTipAmount] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('');
 
   // Redirect to signin if not authenticated
   useEffect(() => {
@@ -27,19 +30,64 @@ export default function Dashboard() {
     // Only run in browser and if user is authenticated
     if (typeof window === 'undefined' || !user) return;
     
-    // Load tips from localStorage with user-specific key
-    const storageKey = `tips_${user.id}`;
-    const storedTips = localStorage.getItem(storageKey);
-    if (storedTips) {
-      setTips(JSON.parse(storedTips));
-    }
+    const loadTips = async () => {
+      setIsLoading(true);
+      setSyncStatus('Loading tips...');
+      
+      try {
+        // Try to load tips from Supabase first
+        const supabaseTips = await getSupabaseTips(user.id);
+        
+        if (supabaseTips && supabaseTips.length > 0) {
+          // Convert Supabase tips to the format used in the dashboard
+          const formattedTips = supabaseTips.map(tip => ({
+            date: tip.date,
+            amount: tip.amount
+          }));
+          
+          setTips(formattedTips);
+          
+          // Also update localStorage with the latest data
+          const storageKey = `tips_${user.id}`;
+          localStorage.setItem(storageKey, JSON.stringify(formattedTips));
+          setSyncStatus('Tips loaded from database');
+        } else {
+          // Fall back to localStorage if no tips in Supabase
+          const storageKey = `tips_${user.id}`;
+          const storedTips = localStorage.getItem(storageKey);
+          
+          if (storedTips) {
+            const parsedTips = JSON.parse(storedTips);
+            setTips(parsedTips);
+            
+            // Sync localStorage tips to Supabase
+            setSyncStatus('Syncing tips to database...');
+            for (const tip of parsedTips) {
+              await saveTipToSupabase(user.id, tip.date, tip.amount);
+            }
+            setSyncStatus('Tips synced to database');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading tips:', error);
+        setSyncStatus('Error loading tips');
+        
+        // Fall back to localStorage if there's an error
+        const storageKey = `tips_${user.id}`;
+        const storedTips = localStorage.getItem(storageKey);
+        if (storedTips) {
+          setTips(JSON.parse(storedTips));
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
     // Set today's date as default
     const today = new Date().toISOString().split('T')[0];
     setTipDate(today);
 
-    // Initialize
-    updateTotals();
+    loadTips();
   }, [user]);
 
   // Update totals whenever tips change
@@ -50,7 +98,7 @@ export default function Dashboard() {
   }, [tips, selectedMonth, user]);
 
   // Add tip function
-  const addTip = () => {
+  const addTip = async () => {
     if (!user) {
       router.push('/signin');
       return;
@@ -64,19 +112,39 @@ export default function Dashboard() {
       return;
     }
 
-    const newTips = [...tips, { date, amount }];
-    setTips(newTips);
-    
-    // Save with user-specific key
-    const storageKey = `tips_${user.id}`;
-    localStorage.setItem(storageKey, JSON.stringify(newTips));
+    setIsLoading(true);
+    setSyncStatus('Saving tip...');
+
+    try {
+      // Save to Supabase
+      const success = await saveTipToSupabase(user.id, date, amount);
+      
+      if (success) {
+        // Update local state
+        const newTips = [...tips, { date, amount }];
+        setTips(newTips);
+        
+        // Also update localStorage
+        const storageKey = `tips_${user.id}`;
+        localStorage.setItem(storageKey, JSON.stringify(newTips));
+        
+        setSyncStatus('Tip saved successfully');
+      } else {
+        setSyncStatus('Error saving tip to database');
+      }
+    } catch (error) {
+      console.error('Error saving tip:', error);
+      setSyncStatus('Error saving tip');
+    } finally {
+      setIsLoading(false);
+    }
     
     // Clear input
     setTipAmount('');
   };
 
   // Edit tip function
-  const editTip = (index: number) => {
+  const editTip = async (index: number) => {
     if (!user) {
       router.push('/signin');
       return;
@@ -84,31 +152,101 @@ export default function Dashboard() {
 
     const newAmount = prompt('Enter new tip amount:', tips[index].amount.toString());
     if (newAmount && !isNaN(parseFloat(newAmount))) {
-      const newTips = [...tips];
-      newTips[index].amount = parseFloat(newAmount);
-      setTips(newTips);
+      setIsLoading(true);
+      setSyncStatus('Updating tip...');
       
-      // Save with user-specific key
-      const storageKey = `tips_${user.id}`;
-      localStorage.setItem(storageKey, JSON.stringify(newTips));
+      try {
+        const date = tips[index].date;
+        const amount = parseFloat(newAmount);
+        
+        // Update in Supabase
+        const success = await saveTipToSupabase(user.id, date, amount);
+        
+        if (success) {
+          // Update local state
+          const newTips = [...tips];
+          newTips[index].amount = amount;
+          setTips(newTips);
+          
+          // Also update localStorage
+          const storageKey = `tips_${user.id}`;
+          localStorage.setItem(storageKey, JSON.stringify(newTips));
+          
+          setSyncStatus('Tip updated successfully');
+        } else {
+          setSyncStatus('Error updating tip in database');
+        }
+      } catch (error) {
+        console.error('Error updating tip:', error);
+        setSyncStatus('Error updating tip');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
   // Delete tip function
-  const deleteTip = (index: number) => {
+  const deleteTip = async (index: number) => {
     if (!user) {
       router.push('/signin');
       return;
     }
 
     if (confirm('Are you sure you want to delete this tip?')) {
-      const newTips = [...tips];
-      newTips.splice(index, 1);
-      setTips(newTips);
+      setIsLoading(true);
+      setSyncStatus('Deleting tip...');
       
-      // Save with user-specific key
-      const storageKey = `tips_${user.id}`;
-      localStorage.setItem(storageKey, JSON.stringify(newTips));
+      try {
+        // Find the tip in Supabase to get its ID
+        const date = tips[index].date;
+        const supabaseTips = await getSupabaseTips(user.id);
+        const tipToDelete = supabaseTips.find(tip => tip.date === date);
+        
+        if (tipToDelete) {
+          // Delete from Supabase
+          const success = await deleteSupabaseTip(tipToDelete.id, user.id);
+          
+          if (success) {
+            // Update local state
+            const newTips = [...tips];
+            newTips.splice(index, 1);
+            setTips(newTips);
+            
+            // Also update localStorage
+            const storageKey = `tips_${user.id}`;
+            localStorage.setItem(storageKey, JSON.stringify(newTips));
+            
+            setSyncStatus('Tip deleted successfully');
+          } else {
+            setSyncStatus('Error deleting tip from database');
+          }
+        } else {
+          // If tip not found in Supabase, just update local state
+          const newTips = [...tips];
+          newTips.splice(index, 1);
+          setTips(newTips);
+          
+          // Also update localStorage
+          const storageKey = `tips_${user.id}`;
+          localStorage.setItem(storageKey, JSON.stringify(newTips));
+          
+          setSyncStatus('Tip deleted from local storage');
+        }
+      } catch (error) {
+        console.error('Error deleting tip:', error);
+        setSyncStatus('Error deleting tip');
+        
+        // Fall back to just updating local state
+        const newTips = [...tips];
+        newTips.splice(index, 1);
+        setTips(newTips);
+        
+        // Also update localStorage
+        const storageKey = `tips_${user.id}`;
+        localStorage.setItem(storageKey, JSON.stringify(newTips));
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -687,6 +825,13 @@ export default function Dashboard() {
         <h1 className="section-title mx-auto text-center mb-6">Tip Tracker</h1>
 
         <div className="dashboard-container">
+          {/* Status message */}
+          {syncStatus && (
+            <div className={`text-center mb-4 text-sm ${syncStatus.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
+              {syncStatus}
+            </div>
+          )}
+
           {/* Totals Section */}
           <div className="totals-section">
             <div className="total-card">

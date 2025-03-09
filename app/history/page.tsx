@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../components/Header';
 import { useAuth } from '../lib/AuthContext';
+import { getTips as getSupabaseTips } from '../lib/supabase';
 
 export default function History() {
   const { user, loading } = useAuth();
@@ -13,6 +14,8 @@ export default function History() {
   const [filterType, setFilterType] = useState<'all' | 'week' | 'month' | 'year'>('all');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [totalAmount, setTotalAmount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('');
 
   // Redirect to sign in if not authenticated
   useEffect(() => {
@@ -21,19 +24,67 @@ export default function History() {
     }
   }, [user, loading, router]);
 
-  // Load tips from localStorage
+  // Load tips from Supabase
   useEffect(() => {
     if (typeof window === 'undefined' || !user) return;
     
-    // Use user-specific key
-    const storageKey = `tips_${user.id}`;
-    const storedTips = localStorage.getItem(storageKey);
-    if (storedTips) {
-      const parsedTips = JSON.parse(storedTips);
-      setTips(parsedTips);
-      setFilteredTips(parsedTips);
-      calculateTotal(parsedTips);
-    }
+    const loadTips = async () => {
+      setIsLoading(true);
+      setSyncStatus('Loading tips...');
+      
+      try {
+        // Try to load tips from Supabase first
+        const supabaseTips = await getSupabaseTips(user.id);
+        
+        if (supabaseTips && supabaseTips.length > 0) {
+          // Convert Supabase tips to the format used in the history page
+          const formattedTips = supabaseTips.map(tip => ({
+            date: tip.date,
+            amount: tip.amount
+          }));
+          
+          setTips(formattedTips);
+          setFilteredTips(formattedTips);
+          calculateTotal(formattedTips);
+          
+          // Also update localStorage with the latest data
+          const storageKey = `tips_${user.id}`;
+          localStorage.setItem(storageKey, JSON.stringify(formattedTips));
+          setSyncStatus('Tips loaded from database');
+        } else {
+          // Fall back to localStorage if no tips in Supabase
+          const storageKey = `tips_${user.id}`;
+          const storedTips = localStorage.getItem(storageKey);
+          
+          if (storedTips) {
+            const parsedTips = JSON.parse(storedTips);
+            setTips(parsedTips);
+            setFilteredTips(parsedTips);
+            calculateTotal(parsedTips);
+            setSyncStatus('Tips loaded from local storage');
+          } else {
+            setSyncStatus('No tips found');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading tips:', error);
+        setSyncStatus('Error loading tips');
+        
+        // Fall back to localStorage if there's an error
+        const storageKey = `tips_${user.id}`;
+        const storedTips = localStorage.getItem(storageKey);
+        if (storedTips) {
+          const parsedTips = JSON.parse(storedTips);
+          setTips(parsedTips);
+          setFilteredTips(parsedTips);
+          calculateTotal(parsedTips);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadTips();
   }, [user]);
 
   // Apply filters when filter type changes
@@ -151,6 +202,13 @@ export default function History() {
           <h1 className="text-3xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">
             Tip History
           </h1>
+          
+          {/* Status message */}
+          {syncStatus && (
+            <div className={`text-center mb-4 text-sm ${syncStatus.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
+              {syncStatus}
+            </div>
+          )}
           
           {/* Filters and Stats */}
           <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 mb-8 shadow-lg">

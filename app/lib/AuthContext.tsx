@@ -186,11 +186,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string) => {
     try {
+      // Get the site URL from environment or use the current origin
+      const siteUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
+      
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`
+          emailRedirectTo: `${siteUrl}/dashboard`
         }
       });
       
