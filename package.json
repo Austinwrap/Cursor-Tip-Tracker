@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "netlify-build": "npm ci && rm -rf .next out && NEXT_TELEMETRY_DISABLED=1 next build && cp out/404.html out/tips.html",
+    "netlify-build": "npm ci && rm -rf .next out && NEXT_TELEMETRY_DISABLED=1 next build && node scripts/copy-html-files.js",
     "start": "next start",
     "lint": "next lint"
   },

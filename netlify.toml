@@ -17,29 +17,14 @@
 # [[plugins]]
 #  package = "@netlify/plugin-nextjs"
 
-# Specific route for the Tip Tracker
+# For all routes, serve the corresponding HTML file first
 [[redirects]]
-  from = "/tips"
-  to = "/tips.html"
+  from = "/*"
+  to = "/:splat.html"
   status = 200
+  force = false
 
-[[redirects]]
-  from = "/tips/"
-  to = "/tips.html"
-  status = 200
-
-# Specific route for the Dashboard
-[[redirects]]
-  from = "/dashboard"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/dashboard/"
-  to = "/dashboard.html"
-  status = 200
-
-# For all other routes, serve the index.html file
+# If the HTML file doesn't exist, fall back to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"

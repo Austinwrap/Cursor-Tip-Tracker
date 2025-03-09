@@ -180,7 +180,7 @@ export default function Dashboard() {
         <style jsx global>{`
           .input-section, .totals-section, .tip-list, .calendar-container {
             background: linear-gradient(145deg, #141414, #1c1c1c);
-            border: 1px solid #88eaff;
+            border: 1px solid #00a3af;
             padding: 16px;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 163, 175, 0.15);
@@ -201,7 +201,7 @@ export default function Dashboard() {
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(145deg, rgba(136, 234, 255, 0.05), rgba(136, 234, 255, 0));
+            background: linear-gradient(145deg, rgba(0, 163, 175, 0.05), rgba(0, 163, 175, 0));
             pointer-events: none;
           }
           
@@ -215,19 +215,19 @@ export default function Dashboard() {
           .input-section input, .input-section button {
             padding: 12px 16px;
             border-radius: 8px;
-            border: 1px solid #88eaff;
+            border: 1px solid #00a3af;
             background: #222222;
             color: #ffffff;
             font-size: 14px;
             flex: 1;
             min-width: 100px;
-            box-shadow: 0 2px 8px rgba(136, 234, 255, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 163, 175, 0.2);
             transition: all 0.3s ease;
           }
           
           .input-section input:focus, .input-section button:focus {
             outline: none;
-            box-shadow: 0 0 12px rgba(136, 234, 255, 0.5);
+            box-shadow: 0 0 12px rgba(0, 163, 175, 0.5);
             border-color: #00a3af;
           }
           
@@ -264,19 +264,19 @@ export default function Dashboard() {
             padding: 16px;
             border-radius: 8px;
             text-align: center;
-            border: 1px solid #88eaff;
-            box-shadow: 0 4px 12px rgba(136, 234, 255, 0.1);
+            border: 1px solid #00a3af;
+            box-shadow: 0 4px 12px rgba(0, 163, 175, 0.1);
             transition: all 0.3s ease;
           }
           
           .total-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(136, 234, 255, 0.2);
+            box-shadow: 0 8px 20px rgba(0, 163, 175, 0.2);
           }
           
           .total-card h3 {
             font-size: 14px;
-            color: #88eaff;
+            color: #00a3af;
             margin-bottom: 8px;
           }
           
@@ -316,7 +316,7 @@ export default function Dashboard() {
           }
           
           .tip-list li:hover {
-            background: rgba(136, 234, 255, 0.05);
+            background: rgba(0, 163, 175, 0.05);
           }
           
           .tip-list li:last-child {
@@ -329,7 +329,7 @@ export default function Dashboard() {
           
           .tip-list .amount {
             font-weight: 700;
-            color: #88eaff;
+            color: #00a3af;
           }
           
           .tip-list .actions {
@@ -348,12 +348,12 @@ export default function Dashboard() {
           }
           
           .tip-list .edit-btn {
-            border-color: #88eaff;
-            color: #88eaff;
+            border-color: #00a3af;
+            color: #00a3af;
           }
           
           .tip-list .edit-btn:hover {
-            background: rgba(136, 234, 255, 0.1);
+            background: rgba(0, 163, 175, 0.1);
           }
           
           .tip-list .delete-btn {
@@ -379,7 +379,7 @@ export default function Dashboard() {
           .calendar-title {
             font-size: 18px;
             font-weight: 600;
-            color: #88eaff;
+            color: #00a3af;
           }
           
           .calendar-nav {
@@ -389,8 +389,8 @@ export default function Dashboard() {
           
           .calendar-nav button {
             background: none;
-            border: 1px solid #88eaff;
-            color: #88eaff;
+            border: 1px solid #00a3af;
+            color: #00a3af;
             width: 32px;
             height: 32px;
             border-radius: 50%;
@@ -402,7 +402,7 @@ export default function Dashboard() {
           }
           
           .calendar-nav button:hover {
-            background: rgba(136, 234, 255, 0.1);
+            background: rgba(0, 163, 175, 0.1);
             transform: scale(1.05);
           }
           
@@ -431,7 +431,7 @@ export default function Dashboard() {
             background: linear-gradient(145deg, #252525, #2a2a2a);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            border-color: #88eaff;
+            border-color: #00a3af;
           }
           
           .calendar-day.empty {
@@ -447,7 +447,7 @@ export default function Dashboard() {
           
           .calendar-day.has-tip {
             background: linear-gradient(145deg, #1a2a2a, #203030);
-            border-color: #88eaff;
+            border-color: #00a3af;
           }
           
           .calendar-day.today {
@@ -463,7 +463,7 @@ export default function Dashboard() {
           
           .calendar-day .tip-text {
             font-size: 12px;
-            color: #88eaff;
+            color: #00a3af;
             font-weight: 600;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 4px;
@@ -474,7 +474,7 @@ export default function Dashboard() {
             font-size: 24px;
             font-weight: 700;
             margin-bottom: 20px;
-            color: #88eaff;
+            color: #00a3af;
             text-align: center;
             position: relative;
             display: inline-block;
@@ -487,7 +487,7 @@ export default function Dashboard() {
             left: 0;
             width: 100%;
             height: 2px;
-            background: linear-gradient(90deg, transparent, #88eaff, transparent);
+            background: linear-gradient(90deg, transparent, #00a3af, transparent);
           }
           
           .dashboard-container {
