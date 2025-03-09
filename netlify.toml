@@ -3,7 +3,7 @@
   publish = "out"
 
 [build.environment]
-  NEXT_PUBLIC_URL = "https://tiptracker.ai"
+  NEXT_PUBLIC_URL = "https://tiptrackerai.netlify.app"
   NODE_VERSION = "18"
   NPM_FLAGS = "--legacy-peer-deps"
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,STRIPE_SECRET_KEY,STRIPE_PUBLISHABLE_KEY,STRIPE_WEBHOOK_SECRET,STRIPE_MONTHLY_PRICE_ID,STRIPE_ANNUAL_PRICE_ID"
@@ -23,66 +23,96 @@
 # [[plugins]]
 #  package = "@netlify/plugin-nextjs"
 
+# Force all page requests to use HTTPS
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
 # Specific redirects for each route to ensure they work consistently
 [[redirects]]
   from = "/dashboard"
   to = "/dashboard.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/dashboard/*"
   to = "/dashboard.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/signin"
   to = "/signin.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/signin/*"
   to = "/signin.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/signup"
   to = "/signup.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/signup/*"
   to = "/signup.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/history"
   to = "/history.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/history/*"
   to = "/history.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/analytics"
   to = "/analytics.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/analytics/*"
   to = "/analytics.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/upgrade"
   to = "/upgrade.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/upgrade/*"
   to = "/upgrade.html"
   status = 200
+  force = true
+
+[[redirects]]
+  from = "/tips"
+  to = "/tips.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/tips/*"
+  to = "/tips.html"
+  status = 200
+  force = true
 
 # For all other routes, serve the corresponding HTML file first
 [[redirects]]

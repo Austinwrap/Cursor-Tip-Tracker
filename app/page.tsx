@@ -17,32 +17,35 @@ export default function Home() {
         
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <div className="mb-8 relative inline-block">
-            <h1 className="text-6xl md:text-7xl font-bold tracking-tight">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-500 to-blue-500 animate-gradient">
-                TipTracker
-              </span>
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">
+              Track your tips. Maximize your earnings.
             </h1>
             <div className="absolute -top-6 -right-6 w-12 h-12 text-yellow-400 animate-bounce-slow opacity-90">
               ✨
             </div>
           </div>
           
-          <p className="text-2xl mb-10 text-gray-300 font-light">
-            Track your tips. <span className="text-blue-400">Maximize</span> your earnings.
+          <p className="text-xl text-gray-300 mb-10">
+            The smarter way for service industry professionals to track daily tips, analyze earnings, and unlock financial insights.
           </p>
           
           <div className="bg-black/40 backdrop-blur-sm border border-gray-800 rounded-2xl p-10 shadow-2xl mb-16 transform hover:scale-[1.02] transition-all duration-300">
             <div className="flex flex-col items-center justify-center space-y-8">
               <div className="text-center">
-                <p className="text-xl mb-8 text-gray-300 leading-relaxed">
-                  The <span className="font-semibold text-blue-400">smarter way</span> for service industry professionals to track daily tips, 
-                  analyze earnings, and unlock financial insights.
-                </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="/dashboard" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-8 rounded-full hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg hover:shadow-blue-500/20 transform hover:scale-105 uppercase tracking-wider inline-block">
+                  <Link 
+                    href="/dashboard" 
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-8 rounded-full hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg hover:shadow-blue-500/20"
+                    onClick={(e) => {
+                      // Prevent default behavior
+                      e.preventDefault();
+                      // Navigate programmatically
+                      window.location.href = '/dashboard';
+                    }}
+                  >
                     Try Tip Tracker
                   </Link>
-                  <Link href="/upgrade" className="bg-transparent border-2 border-gray-700 text-white font-bold py-4 px-8 rounded-full hover:border-blue-500 hover:text-blue-400 transition-all uppercase tracking-wider inline-block">
+                  <Link href="/upgrade" className="bg-transparent border-2 border-gray-700 text-white font-bold py-4 px-8 rounded-full hover:border-gray-500 transition-all">
                     View Premium
                   </Link>
                 </div>
