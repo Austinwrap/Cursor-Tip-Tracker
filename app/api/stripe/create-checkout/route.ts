@@ -4,18 +4,20 @@ import { supabase } from '@/app/lib/supabase';
 
 // Initialize Stripe with the secret key if available
 let stripe: Stripe | null = null;
-try {
-  if (process.env.STRIPE_SECRET_KEY) {
+
+// Only initialize Stripe if we're in a runtime environment (not during build)
+if (typeof process !== 'undefined' && process.env.STRIPE_SECRET_KEY) {
+  try {
     // Initialize Stripe with the latest API version
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2025-02-24.acacia', // Updated to match the expected type
     });
     console.log('Stripe initialized successfully');
-  } else {
-    console.warn('Stripe secret key not found. Using development mode.');
+  } catch (error) {
+    console.error('Failed to initialize Stripe:', error);
   }
-} catch (error) {
-  console.error('Failed to initialize Stripe:', error);
+} else {
+  console.warn('Stripe secret key not found. Using development mode.');
 }
 
 // Dummy price IDs for development

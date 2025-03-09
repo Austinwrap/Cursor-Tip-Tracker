@@ -2,16 +2,37 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabase } from '@/app/lib/supabase';
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-02-24.acacia',
-});
+// Initialize Stripe only if the secret key is available
+let stripe: Stripe | null = null;
+
+// Only initialize Stripe if we're in a runtime environment (not during build)
+if (typeof process !== 'undefined' && process.env.STRIPE_SECRET_KEY) {
+  try {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-02-24.acacia',
+    });
+    console.log('Stripe initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize Stripe:', error);
+  }
+} else {
+  console.warn('Stripe secret key not found. Using development mode.');
+}
 
 // Webhook secret for verifying events
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(request: Request) {
   try {
+    // Check if Stripe is initialized
+    if (!stripe) {
+      console.log('Stripe not initialized, running in development mode');
+      return NextResponse.json({ 
+        error: 'Stripe is not configured', 
+        dev: true 
+      }, { status: 200 });
+    }
+
     const body = await request.text();
     const signature = request.headers.get('stripe-signature') || '';
 
