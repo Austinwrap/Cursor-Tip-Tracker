@@ -77,10 +77,10 @@ export async function POST(request: Request) {
             dev: true,
             url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?success=true&dev=true&plan=${plan}`
           });
-        } catch (devModeError) {
+        } catch (devModeError: any) {
           console.error('Error in development mode:', devModeError);
           return NextResponse.json(
-            { error: 'Error in development mode', details: devModeError.message },
+            { error: 'Error in development mode', details: devModeError.message || 'Unknown error' },
             { status: 500 }
           );
         }
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     console.log('Creating Polar.sh checkout session for plan:', plan);
     
     // Get the product ID based on the selected plan
-    let productId;
+    let productId: string | undefined;
     
     if (plan === 'monthly') {
       productId = process.env.POLAR_MONTHLY_PRODUCT_ID;
@@ -156,14 +156,14 @@ export async function POST(request: Request) {
       console.error('Polar.sh error creating checkout session:', polarError);
       
       return NextResponse.json(
-        { error: 'Error creating checkout session. Please try again.', details: polarError.message },
+        { error: 'Error creating checkout session. Please try again.', details: polarError.message || 'Unknown error' },
         { status: 500 }
       );
     }
   } catch (error: any) {
     console.error('Error creating checkout session:', error);
     return NextResponse.json(
-      { error: 'Error creating checkout session. Please try again.', details: error.message },
+      { error: 'Error creating checkout session. Please try again.', details: error.message || 'Unknown error' },
       { status: 500 }
     );
   }

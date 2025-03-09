@@ -10,7 +10,7 @@ if (typeof process !== 'undefined' && process.env.STRIPE_SECRET_KEY) {
   try {
     // Initialize Stripe with the latest API version
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-02-24.acacia', // Updated to match the expected type
+      apiVersion: '2023-10-16', // Updated to a stable version
     });
     console.log('Stripe initialized successfully');
   } catch (error) {
@@ -95,10 +95,10 @@ export async function POST(request: Request) {
           dev: true,
           url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?success=true&dev=true&plan=${plan}`
         });
-      } catch (devModeError) {
+      } catch (devModeError: any) {
         console.error('Error in development mode:', devModeError);
         return NextResponse.json(
-          { error: 'Error in development mode', details: devModeError.message },
+          { error: 'Error in development mode', details: devModeError.message || 'Unknown error' },
           { status: 500 }
         );
       }
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     console.log('Creating Stripe checkout session for plan:', plan);
     
     // Get the price ID based on the selected plan
-    let priceId;
+    let priceId: string | undefined;
     let mode: 'subscription' | 'payment' = 'subscription';
     
     if (plan === 'monthly') {
@@ -131,6 +131,10 @@ export async function POST(request: Request) {
     console.log('Using price ID:', priceId, 'with mode:', mode);
     
     try {
+      if (!stripe) {
+        throw new Error('Stripe is not initialized');
+      }
+      
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
@@ -166,14 +170,14 @@ export async function POST(request: Request) {
       }
       
       return NextResponse.json(
-        { error: errorMessage, details: stripeError.message },
+        { error: errorMessage, details: stripeError.message || 'Unknown error' },
         { status: 500 }
       );
     }
   } catch (error: any) {
     console.error('Error creating checkout session:', error);
     return NextResponse.json(
-      { error: 'Error creating checkout session. Please try again.', details: error.message },
+      { error: 'Error creating checkout session. Please try again.', details: error.message || 'Unknown error' },
       { status: 500 }
     );
   }
