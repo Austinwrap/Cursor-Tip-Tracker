@@ -23,6 +23,7 @@ if (typeof process !== 'undefined' && process.env.STRIPE_SECRET_KEY) {
 // Dummy price IDs for development
 const DUMMY_MONTHLY_PRICE_ID = 'price_1234567890';
 const DUMMY_ANNUAL_PRICE_ID = 'price_0987654321';
+const DUMMY_LIFETIME_PRICE_ID = 'price_9876543210';
 
 // This is a placeholder for the actual Stripe integration
 // You'll need to install the Stripe package: npm install stripe
@@ -49,7 +50,10 @@ export async function POST(request: Request) {
       // Update the user's is_paid status in the database
       const { error } = await supabase
         .from('users')
-        .update({ is_paid: true })
+        .update({ 
+          is_paid: true,
+          subscription_type: plan 
+        })
         .eq('id', userId);
         
       if (error) {
@@ -72,19 +76,27 @@ export async function POST(request: Request) {
     console.log('Creating Stripe checkout session for plan:', plan);
     
     // Get the price ID based on the selected plan
-    const priceId = plan === 'monthly' 
-      ? process.env.STRIPE_MONTHLY_PRICE_ID 
-      : process.env.STRIPE_ANNUAL_PRICE_ID;
+    let priceId;
+    let mode: 'subscription' | 'payment' = 'subscription';
+    
+    if (plan === 'monthly') {
+      priceId = process.env.STRIPE_MONTHLY_PRICE_ID;
+    } else if (plan === 'annual') {
+      priceId = process.env.STRIPE_ANNUAL_PRICE_ID;
+    } else if (plan === 'lifetime') {
+      priceId = process.env.STRIPE_LIFETIME_PRICE_ID;
+      mode = 'payment'; // One-time payment for lifetime plan
+    }
     
     if (!priceId) {
-      console.error('Price ID not configured');
+      console.error(`Price ID not configured for plan: ${plan}`);
       return NextResponse.json(
-        { error: 'Stripe price ID not configured' },
+        { error: `Stripe price ID not configured for ${plan} plan` },
         { status: 500 }
       );
     }
     
-    console.log('Using price ID:', priceId);
+    console.log('Using price ID:', priceId, 'with mode:', mode);
     
     try {
       const session = await stripe.checkout.sessions.create({
@@ -95,8 +107,8 @@ export async function POST(request: Request) {
             quantity: 1,
           },
         ],
-        mode: 'subscription',
-        success_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?success=true`,
+        mode: mode,
+        success_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?success=true&plan=${plan}`,
         cancel_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/upgrade?canceled=true`,
         client_reference_id: userId,
         metadata: {

@@ -62,23 +62,34 @@ export async function POST(request: Request) {
         // Get customer ID and user ID from session
         const customerId = session.customer as string;
         const userId = session.client_reference_id;
+        const plan = session.metadata?.plan || 'monthly';
         
         if (!userId) {
           console.error('No user ID found in session');
           return NextResponse.json({ error: 'No user ID found' }, { status: 400 });
         }
         
-        console.log(`Processing completed checkout for user: ${userId}`);
+        console.log(`Processing completed checkout for user: ${userId}, plan: ${plan}`);
         
         // Update user's subscription status in database
+        const updateData: any = { 
+          is_paid: true,
+          stripe_customer_id: customerId,
+          subscription_type: plan,
+          updated_at: new Date().toISOString()
+        };
+        
+        // For subscription plans, set status to active
+        if (plan === 'monthly' || plan === 'annual') {
+          updateData.subscription_status = 'active';
+        } else if (plan === 'lifetime') {
+          // For lifetime plan, set a special status
+          updateData.subscription_status = 'lifetime';
+        }
+        
         const { error } = await supabase
           .from('users')
-          .update({ 
-            is_paid: true,
-            stripe_customer_id: customerId,
-            subscription_status: 'active',
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', userId);
         
         if (error) {
@@ -86,7 +97,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
         }
         
-        console.log(`User ${userId} subscription activated successfully`);
+        console.log(`User ${userId} subscription activated successfully with plan: ${plan}`);
         break;
       }
       
@@ -133,7 +144,7 @@ export async function POST(request: Request) {
         // Find user with this customer ID
         const { data: users, error: findError } = await supabase
           .from('users')
-          .select('id')
+          .select('id, subscription_type')
           .eq('stripe_customer_id', customerId);
         
         if (findError || !users || users.length === 0) {
@@ -142,6 +153,13 @@ export async function POST(request: Request) {
         }
         
         const userId = users[0].id;
+        const subscriptionType = users[0].subscription_type;
+        
+        // Don't change status for lifetime subscriptions
+        if (subscriptionType === 'lifetime') {
+          console.log(`User ${userId} has a lifetime subscription, not changing status`);
+          return NextResponse.json({ received: true });
+        }
         
         // Update user's subscription status
         const { error } = await supabase
@@ -159,6 +177,44 @@ export async function POST(request: Request) {
         }
         
         console.log(`User ${userId} subscription canceled`);
+        break;
+      }
+      
+      case 'payment_intent.succeeded': {
+        // This event is triggered for one-time payments (like lifetime plan)
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        
+        // Check if this is related to a checkout session
+        if (!paymentIntent.metadata?.userId) {
+          console.log('Payment intent without user ID, ignoring');
+          return NextResponse.json({ received: true });
+        }
+        
+        const userId = paymentIntent.metadata.userId;
+        const plan = paymentIntent.metadata.plan;
+        
+        // Only process if this is a lifetime plan
+        if (plan === 'lifetime') {
+          console.log(`Processing lifetime payment for user: ${userId}`);
+          
+          const { error } = await supabase
+            .from('users')
+            .update({ 
+              is_paid: true,
+              subscription_status: 'lifetime',
+              subscription_type: 'lifetime',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+          
+          if (error) {
+            console.error('Error updating user lifetime status:', error);
+            return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+          }
+          
+          console.log(`User ${userId} lifetime access activated`);
+        }
+        
         break;
       }
       

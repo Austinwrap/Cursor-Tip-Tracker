@@ -13,7 +13,7 @@ export default function Upgrade() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const handleUpgradeClick = async (plan: 'monthly' | 'annual') => {
+  const handleUpgradeClick = async (plan: 'monthly' | 'annual' | 'lifetime') => {
     if (!user) {
       router.push('/signin');
       return;
@@ -141,7 +141,7 @@ export default function Upgrade() {
               </button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Monthly Plan */}
               <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl overflow-hidden shadow-xl transform transition-all hover:scale-105 hover:shadow-cyan-500/10">
                 <div className="p-8">
@@ -233,6 +233,58 @@ export default function Upgrade() {
                     className="w-full bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:from-cyan-700 hover:to-teal-700 transition-all shadow-lg"
                   >
                     Choose Annual
+                  </button>
+                </div>
+              </div>
+              
+              {/* Lifetime Plan */}
+              <div className="bg-gradient-to-br from-purple-900/40 to-black border border-purple-500/30 rounded-xl overflow-hidden shadow-xl transform transition-all hover:scale-105 hover:shadow-purple-500/20">
+                <div className="absolute top-0 right-0 bg-purple-600 text-white px-4 py-1 rounded-bl-lg font-medium text-sm">
+                  LIFETIME ACCESS
+                </div>
+                <div className="p-8">
+                  <h3 className="text-2xl font-bold mb-2">Lifetime</h3>
+                  <div className="text-4xl font-bold mb-4">$99<span className="text-xl text-gray-400">/once</span></div>
+                  <p className="text-gray-400 mb-6">Pay once, use forever</p>
+                  
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-center">
+                      <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Advanced Analytics
+                    </li>
+                    <li className="flex items-center">
+                      <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Earnings Projections
+                    </li>
+                    <li className="flex items-center">
+                      <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Data Export
+                    </li>
+                    <li className="flex items-center">
+                      <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Priority Support
+                    </li>
+                    <li className="flex items-center">
+                      <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Never Pay Again
+                    </li>
+                  </ul>
+                  
+                  <button
+                    onClick={() => handleUpgradeClick('lifetime')}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg"
+                  >
+                    Choose Lifetime
                   </button>
                 </div>
               </div>
