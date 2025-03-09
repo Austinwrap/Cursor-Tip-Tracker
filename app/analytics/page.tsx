@@ -8,7 +8,6 @@ import MonthlyChart from '../components/analytics/MonthlyChart';
 import DailyAveragesChart from '../components/analytics/DailyAveragesChart';
 import BestWorstDays from '../components/analytics/BestWorstDays';
 import Projections from '../components/analytics/Projections';
-import AIChatAssistant from '../components/analytics/AIChatAssistant';
 
 export default function Analytics() {
   const { user, isPaid, loading } = useAuth();
@@ -37,12 +36,12 @@ export default function Analytics() {
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">Analytics Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">Analytics Dashboard</h1>
         
         {!isPaid && (
-          <div className="bg-gradient-to-r from-purple-900/80 to-blue-900/80 backdrop-blur-sm border border-purple-500/50 rounded-lg p-6 shadow-xl mb-8 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob"></div>
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
+          <div className="bg-gradient-to-r from-cyan-900/80 to-teal-900/80 backdrop-blur-sm border border-cyan-500/50 rounded-lg p-6 shadow-xl mb-8 relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob"></div>
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-teal-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
             
             <h2 className="text-xl font-bold mb-2 text-center">Premium Features</h2>
             <p className="text-center mb-4">
@@ -51,7 +50,7 @@ export default function Analytics() {
             <div className="text-center">
               <a 
                 href="/upgrade" 
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 px-6 rounded-full hover:from-purple-500 hover:to-blue-500 transition-all shadow-lg transform hover:scale-105 hover:shadow-purple-500/50"
+                className="bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-bold py-2 px-6 rounded-full hover:from-cyan-500 hover:to-teal-500 transition-all shadow-lg transform hover:scale-105 hover:shadow-cyan-500/50"
               >
                 Upgrade Now
               </a>
@@ -59,26 +58,15 @@ export default function Analytics() {
           </div>
         )}
         
-        {/* AI Chat Assistant - Featured prominently at the top for paid users */}
-        {isPaid && (
-          <div className="mb-8">
-            <div className="flex items-center mb-4">
-              <h2 className="text-xl font-semibold">AI Chat Assistant</h2>
-              <span className="ml-2 px-2 py-0.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs rounded-full">PREMIUM</span>
-            </div>
-            <AIChatAssistant />
-          </div>
-        )}
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Monthly Chart */}
-          <div className="bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
+          <div className="bg-gray-900 border border-gray-700 hover:border-cyan-500 rounded-lg p-6 shadow-lg transition-all duration-300">
             <h2 className="text-xl font-semibold mb-4">Monthly Earnings</h2>
             
             {isPaid ? (
               <MonthlyChart />
             ) : (
-              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300">
+              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-cyan-500/50 transition-all duration-300">
                 <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
                 <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
                 <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
@@ -86,7 +74,7 @@ export default function Analytics() {
                 </p>
                 <a 
                   href="/upgrade" 
-                  className="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  className="mt-4 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
                 >
                   Unlock Now →
                 </a>
@@ -95,13 +83,13 @@ export default function Analytics() {
           </div>
           
           {/* Daily Averages */}
-          <div className="bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
+          <div className="bg-gray-900 border border-gray-700 hover:border-cyan-500 rounded-lg p-6 shadow-lg transition-all duration-300">
             <h2 className="text-xl font-semibold mb-4">Daily Averages</h2>
             
             {isPaid ? (
               <DailyAveragesChart />
             ) : (
-              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300">
+              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-cyan-500/50 transition-all duration-300">
                 <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
                 <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
                 <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
@@ -109,7 +97,7 @@ export default function Analytics() {
                 </p>
                 <a 
                   href="/upgrade" 
-                  className="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  className="mt-4 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
                 >
                   Unlock Now →
                 </a>
@@ -118,13 +106,13 @@ export default function Analytics() {
           </div>
           
           {/* Best/Worst Days */}
-          <div className="bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
+          <div className="bg-gray-900 border border-gray-700 hover:border-cyan-500 rounded-lg p-6 shadow-lg transition-all duration-300">
             <h2 className="text-xl font-semibold mb-4">Best & Worst Days</h2>
             
             {isPaid ? (
               <BestWorstDays />
             ) : (
-              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300">
+              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-cyan-500/50 transition-all duration-300">
                 <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
                 <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
                 <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
@@ -132,7 +120,7 @@ export default function Analytics() {
                 </p>
                 <a 
                   href="/upgrade" 
-                  className="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  className="mt-4 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
                 >
                   Unlock Now →
                 </a>
@@ -141,21 +129,21 @@ export default function Analytics() {
           </div>
           
           {/* Projections */}
-          <div className="bg-gray-900 border border-gray-700 hover:border-blue-500 rounded-lg p-6 shadow-lg transition-all duration-300">
+          <div className="bg-gray-900 border border-gray-700 hover:border-cyan-500 rounded-lg p-6 shadow-lg transition-all duration-300">
             <h2 className="text-xl font-semibold mb-4">Future Projections</h2>
             
             {isPaid ? (
               <Projections />
             ) : (
-              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-purple-500/50 transition-all duration-300">
+              <div className="h-64 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-cyan-500/50 transition-all duration-300">
                 <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🔒</div>
                 <div className="text-xl font-semibold text-gray-400">Premium Feature</div>
                 <p className="text-sm text-gray-500 mt-2 text-center max-w-xs">
-                  Get AI-powered predictions about your future earnings
+                  Get data-driven predictions about your future earnings
                 </p>
                 <a 
                   href="/upgrade" 
-                  className="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  className="mt-4 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
                 >
                   Unlock Now →
                 </a>
@@ -164,16 +152,52 @@ export default function Analytics() {
           </div>
         </div>
         
-        {/* AI Chat Assistant - For free users, shown at the bottom */}
-        {!isPaid && (
-          <div className="mt-8">
-            <div className="flex items-center mb-4">
-              <h2 className="text-xl font-semibold">AI Chat Assistant</h2>
-              <span className="ml-2 px-2 py-0.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs rounded-full">PREMIUM</span>
-            </div>
-            <AIChatAssistant />
+        {/* Data Export Feature */}
+        <div className="mt-8 bg-gray-900 border border-gray-700 hover:border-cyan-500 rounded-lg p-6 shadow-lg transition-all duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Export Your Data</h2>
+            <span className="px-2 py-0.5 bg-gradient-to-r from-cyan-600 to-teal-600 text-white text-xs rounded-full">PREMIUM</span>
           </div>
-        )}
+          
+          {isPaid ? (
+            <div className="bg-black/30 rounded-lg p-6 border border-gray-800">
+              <p className="text-gray-300 mb-4">Download your tip data in various formats for your records or further analysis.</p>
+              <div className="flex flex-wrap gap-3">
+                <button className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  CSV
+                </button>
+                <button className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Excel
+                </button>
+                <button className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  PDF
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="h-40 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg border border-gray-800 group hover:border-cyan-500/50 transition-all duration-300">
+              <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">📊</div>
+              <p className="text-sm text-gray-500 text-center max-w-xs mb-3">
+                Export your tip data in multiple formats for accounting or tax purposes
+              </p>
+              <a 
+                href="/upgrade" 
+                className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+              >
+                Upgrade to Export →
+              </a>
+            </div>
+          )}
+        </div>
       </div>
       
       <style jsx>{`

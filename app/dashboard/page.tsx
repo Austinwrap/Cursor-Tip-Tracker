@@ -7,6 +7,10 @@ export default function Dashboard() {
   const [tips, setTips] = useState<Array<{date: string, amount: number}>>([]);
   const [weeklyTotal, setWeeklyTotal] = useState('0.00');
   const [monthlyTotal, setMonthlyTotal] = useState('0.00');
+  const [yearlyTotal, setYearlyTotal] = useState('0.00');
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [tipDate, setTipDate] = useState<string>('');
+  const [tipAmount, setTipAmount] = useState<string>('');
 
   useEffect(() => {
     // Only run in browser
@@ -20,13 +24,9 @@ export default function Dashboard() {
 
     // Set today's date as default
     const today = new Date().toISOString().split('T')[0];
-    const dateInput = document.getElementById('tipDate') as HTMLInputElement;
-    if (dateInput) {
-      dateInput.value = today;
-    }
+    setTipDate(today);
 
     // Initialize
-    renderCalendar();
     updateTotals();
   }, []);
 
@@ -34,15 +34,12 @@ export default function Dashboard() {
   useEffect(() => {
     renderCalendar();
     updateTotals();
-  }, [tips]);
+  }, [tips, selectedMonth]);
 
   // Add tip function
   const addTip = () => {
-    const dateInput = document.getElementById('tipDate') as HTMLInputElement;
-    const amountInput = document.getElementById('tipAmount') as HTMLInputElement;
-    
-    const date = dateInput?.value;
-    const amount = parseFloat(amountInput?.value || '0');
+    const date = tipDate;
+    const amount = parseFloat(tipAmount);
 
     if (!date || isNaN(amount)) {
       alert('Please enter a valid date and tip amount.');
@@ -54,9 +51,7 @@ export default function Dashboard() {
     localStorage.setItem('tips', JSON.stringify(newTips));
     
     // Clear input
-    if (amountInput) {
-      amountInput.value = '';
-    }
+    setTipAmount('');
   };
 
   // Edit tip function
@@ -80,6 +75,13 @@ export default function Dashboard() {
     }
   };
 
+  // Change month
+  const changeMonth = (increment: number) => {
+    const newMonth = new Date(selectedMonth);
+    newMonth.setMonth(newMonth.getMonth() + increment);
+    setSelectedMonth(newMonth);
+  };
+
   // Render calendar
   const renderCalendar = () => {
     const calendarView = document.getElementById('calendarView');
@@ -87,9 +89,8 @@ export default function Dashboard() {
     
     calendarView.innerHTML = '';
 
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
@@ -99,13 +100,13 @@ export default function Dashboard() {
       dayLabel.textContent = day;
       dayLabel.style.fontWeight = '600';
       dayLabel.style.color = '#00a3af';
-      dayLabel.style.fontSize = '10px';
+      dayLabel.style.fontSize = '12px';
       calendarView.appendChild(dayLabel);
     });
 
     for (let i = 0; i < firstDay; i++) {
       const emptyDay = document.createElement('div');
-      emptyDay.className = 'calendar-day';
+      emptyDay.className = 'calendar-day empty';
       calendarView.appendChild(emptyDay);
     }
 
@@ -115,11 +116,8 @@ export default function Dashboard() {
       dayDiv.className = 'calendar-day';
       dayDiv.dataset.date = dateStr;
       dayDiv.onclick = () => {
-        const dateInput = document.getElementById('tipDate') as HTMLInputElement;
+        setTipDate(dateStr);
         const amountInput = document.getElementById('tipAmount') as HTMLInputElement;
-        if (dateInput) {
-          dateInput.value = dateStr;
-        }
         if (amountInput) {
           amountInput.focus();
         }
@@ -139,6 +137,12 @@ export default function Dashboard() {
         dayDiv.appendChild(tipText);
       }
 
+      // Check if this is today's date
+      const today = new Date();
+      if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+        dayDiv.classList.add('today');
+      }
+
       calendarView.appendChild(dayDiv);
     }
   };
@@ -149,6 +153,7 @@ export default function Dashboard() {
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const yearStart = new Date(today.getFullYear(), 0, 1);
 
     const weeklyTotalValue = tips
       .filter(tip => new Date(tip.date) >= weekStart)
@@ -157,9 +162,14 @@ export default function Dashboard() {
     const monthlyTotalValue = tips
       .filter(tip => new Date(tip.date) >= monthStart)
       .reduce((sum, tip) => sum + tip.amount, 0);
+      
+    const yearlyTotalValue = tips
+      .filter(tip => new Date(tip.date) >= yearStart)
+      .reduce((sum, tip) => sum + tip.amount, 0);
 
     setWeeklyTotal(weeklyTotalValue.toFixed(2));
     setMonthlyTotal(monthlyTotalValue.toFixed(2));
+    setYearlyTotal(yearlyTotalValue.toFixed(2));
   };
 
   return (
@@ -168,16 +178,23 @@ export default function Dashboard() {
       
       <main className="container mx-auto px-4 py-8">
         <style jsx global>{`
-          .input-section, .totals-section, .tip-list, .calendar-view {
+          .input-section, .totals-section, .tip-list, .calendar-container {
             background: linear-gradient(145deg, #141414, #1c1c1c);
             border: 1px solid #88eaff;
-            padding: 10px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(136, 234, 255, 0.1);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 163, 175, 0.15);
             position: relative;
             overflow: hidden;
+            transition: all 0.3s ease;
           }
-          .input-section::before, .totals-section::before, .tip-list::before, .calendar-view::before {
+          
+          .input-section:hover, .totals-section:hover, .tip-list:hover, .calendar-container:hover {
+            box-shadow: 0 8px 30px rgba(0, 163, 175, 0.25);
+            border-color: #00a3af;
+          }
+          
+          .input-section::before, .totals-section::before, .tip-list::before, .calendar-container::before {
             content: '';
             position: absolute;
             top: 0;
@@ -187,210 +204,449 @@ export default function Dashboard() {
             background: linear-gradient(145deg, rgba(136, 234, 255, 0.05), rgba(136, 234, 255, 0));
             pointer-events: none;
           }
+          
           .input-section {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 12px;
             align-items: center;
           }
+          
           .input-section input, .input-section button {
-            padding: 8px 12px;
-            border-radius: 25px;
+            padding: 12px 16px;
+            border-radius: 8px;
             border: 1px solid #88eaff;
             background: #222222;
-            color: #c8c8c8;
-            font-size: 12px;
+            color: #ffffff;
+            font-size: 14px;
             flex: 1;
             min-width: 100px;
-            box-shadow: 0 2px 4px rgba(136, 234, 255, 0.2);
-            transition: box-shadow 0.3s ease;
+            box-shadow: 0 2px 8px rgba(136, 234, 255, 0.2);
+            transition: all 0.3s ease;
           }
+          
           .input-section input:focus, .input-section button:focus {
             outline: none;
-            box-shadow: 0 0 6px rgba(136, 234, 255, 0.5);
+            box-shadow: 0 0 12px rgba(136, 234, 255, 0.5);
+            border-color: #00a3af;
           }
+          
           .input-section button {
-            background: #00a3af;
-            color: #000;
+            background: linear-gradient(135deg, #00a3af, #0088a3);
+            color: #fff;
             border: none;
             cursor: pointer;
-            transition: transform 0.2s ease, background 0.3s ease;
+            transition: all 0.3s ease;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
-          .input-section button:hover, .input-section button:active {
-            background: #008c96;
-            transform: scale(0.9);
+          
+          .input-section button:hover {
+            background: linear-gradient(135deg, #00b8c6, #009bb8);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 163, 175, 0.4);
           }
+          
+          .input-section button:active {
+            transform: translateY(1px);
+          }
+          
           .totals-section {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            gap: 8px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            font-size: 14px;
           }
-          .totals-section div {
-            background: #1a1a1a;
-            padding: 8px;
+          
+          .total-card {
+            background: linear-gradient(145deg, #1a1a1a, #222222);
+            padding: 16px;
             border-radius: 8px;
-            flex: 1;
             text-align: center;
             border: 1px solid #88eaff;
-            box-shadow: 0 2px 4px rgba(136, 234, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(136, 234, 255, 0.1);
+            transition: all 0.3s ease;
           }
+          
+          .total-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(136, 234, 255, 0.2);
+          }
+          
+          .total-card h3 {
+            font-size: 14px;
+            color: #88eaff;
+            margin-bottom: 8px;
+          }
+          
+          .total-card .amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+          }
+          
+          .tip-list {
+            margin-top: 24px;
+          }
+          
+          .tip-list h2 {
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          
           .tip-list ul {
             list-style: none;
             padding: 0;
-            max-height: 120px;
+            max-height: 240px;
             overflow-y: auto;
+            margin: 0;
           }
+          
           .tip-list li {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 0;
-            border-bottom: 1px solid #3a3a3a;
-            font-size: 11px;
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            font-size: 14px;
+            transition: background 0.2s ease;
           }
+          
+          .tip-list li:hover {
+            background: rgba(136, 234, 255, 0.05);
+          }
+          
+          .tip-list li:last-child {
+            border-bottom: none;
+          }
+          
+          .tip-list .date {
+            font-weight: 500;
+          }
+          
+          .tip-list .amount {
+            font-weight: 700;
+            color: #88eaff;
+          }
+          
+          .tip-list .actions {
+            display: flex;
+            gap: 8px;
+          }
+          
           .tip-list button {
             background: none;
-            border: 1px solid #ff5555;
-            color: #ff5555;
+            border: 1px solid;
             cursor: pointer;
-            font-size: 10px;
-            padding: 4px 6px;
-            border-radius: 15px;
-            transition: background 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 2px 4px rgba(255, 85, 85, 0.2);
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
           }
-          .tip-list button:hover, .tip-list button:active {
-            background: #ff5555;
-            color: #000;
-            transform: scale(0.9);
+          
+          .tip-list .edit-btn {
+            border-color: #88eaff;
+            color: #88eaff;
           }
+          
+          .tip-list .edit-btn:hover {
+            background: rgba(136, 234, 255, 0.1);
+          }
+          
+          .tip-list .delete-btn {
+            border-color: #ff5555;
+            color: #ff5555;
+          }
+          
+          .tip-list .delete-btn:hover {
+            background: rgba(255, 85, 85, 0.1);
+          }
+          
+          .calendar-container {
+            margin-top: 24px;
+          }
+          
+          .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+          }
+          
+          .calendar-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #88eaff;
+          }
+          
+          .calendar-nav {
+            display: flex;
+            gap: 12px;
+          }
+          
+          .calendar-nav button {
+            background: none;
+            border: 1px solid #88eaff;
+            color: #88eaff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+          
+          .calendar-nav button:hover {
+            background: rgba(136, 234, 255, 0.1);
+            transform: scale(1.05);
+          }
+          
           .calendar-view {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 3px;
+            gap: 8px;
             text-align: center;
           }
+          
           .calendar-day {
-            padding: 6px;
-            background: #1e1e1e;
-            border: 1px solid #88eaff;
-            border-radius: 6px;
-            min-height: 40px;
-            transition: background 0.3s ease, transform 0.2s ease;
+            padding: 8px;
+            background: linear-gradient(145deg, #1e1e1e, #252525);
+            border: 1px solid #333;
+            border-radius: 8px;
+            min-height: 60px;
+            transition: all 0.3s ease;
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
           }
+          
           .calendar-day:hover {
-            background: #282828;
-            transform: scale(1.02);
+            background: linear-gradient(145deg, #252525, #2a2a2a);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border-color: #88eaff;
           }
+          
+          .calendar-day.empty {
+            background: transparent;
+            border-color: transparent;
+            cursor: default;
+          }
+          
+          .calendar-day.empty:hover {
+            transform: none;
+            box-shadow: none;
+          }
+          
           .calendar-day.has-tip {
-            background: #2a3a2a;
+            background: linear-gradient(145deg, #1a2a2a, #203030);
+            border-color: #88eaff;
           }
-          .calendar-day .tip-text {
-            font-size: 8px;
-            color: #b0ffb0;
-            font-weight: 500;
-            margin-top: 4px;
-            display: block;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 4px;
-            padding: 2px 4px;
+          
+          .calendar-day.today {
+            border: 2px solid #00a3af;
+            box-shadow: 0 0 10px rgba(0, 163, 175, 0.3);
           }
-          h2, h3 {
-            margin: 3px 0;
-            color: #00a3af;
-            font-size: 16px;
-            font-weight: 600;
-          }
+          
           .calendar-day span:first-child {
-            font-size: 10px;
+            font-size: 14px;
             font-weight: 500;
+            margin-bottom: 4px;
           }
-          .tip-container {
+          
+          .calendar-day .tip-text {
+            font-size: 12px;
+            color: #88eaff;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            padding: 2px 6px;
+          }
+          
+          .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #88eaff;
+            text-align: center;
+            position: relative;
+            display: inline-block;
+          }
+          
+          .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
             width: 100%;
-            max-width: 600px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #88eaff, transparent);
+          }
+          
+          .dashboard-container {
             display: grid;
-            gap: 10px;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            max-width: 1000px;
             margin: 0 auto;
           }
-          @media (max-width: 400px) {
+          
+          @media (min-width: 768px) {
+            .dashboard-container {
+              grid-template-columns: 1fr 1fr;
+            }
+            
+            .totals-section {
+              grid-column: span 2;
+            }
+          }
+          
+          @media (max-width: 640px) {
             .input-section {
               flex-direction: column;
             }
+            
             .input-section input, .input-section button {
               width: 100%;
-              min-width: unset;
-              font-size: 11px;
-              padding: 7px 10px;
             }
+            
             .totals-section {
-              flex-direction: column;
-              gap: 6px;
+              grid-template-columns: 1fr;
+              gap: 8px;
             }
+            
             .calendar-day {
-              padding: 5px;
-              min-height: 35px;
+              min-height: 50px;
+              padding: 6px;
             }
+            
             .calendar-day span:first-child {
-              font-size: 9px;
+              font-size: 12px;
             }
+            
             .calendar-day .tip-text {
-              font-size: 7px;
-              padding: 1px 3px;
-            }
-            .tip-list ul {
-              max-height: 100px;
-            }
-          }
-          @media (min-width: 800px) {
-            .tip-container {
-              max-width: 700px;
-            }
-            .calendar-day {
-              padding: 8px;
-              min-height: 45px;
-            }
-            .input-section input, .input-section button {
-              font-size: 13px;
+              font-size: 10px;
             }
           }
         `}</style>
 
-        <div className="tip-container">
-          {/* Input Section */}
-          <div className="input-section">
-            <h2>Tip Tracker</h2>
-            <input type="date" id="tipDate" required />
-            <input type="number" id="tipAmount" placeholder="Enter tip amount" step="0.01" min="0" required />
-            <button onClick={addTip}>Add Tip</button>
-          </div>
+        <h1 className="section-title mx-auto text-center mb-8">Tip Tracker Dashboard</h1>
 
+        <div className="dashboard-container">
           {/* Totals Section */}
           <div className="totals-section">
-            <div>Weekly Total: $<span id="weeklyTotal">{weeklyTotal}</span></div>
-            <div>Monthly Total: $<span id="monthlyTotal">{monthlyTotal}</span></div>
+            <div className="total-card">
+              <h3>Weekly Total</h3>
+              <div className="amount">${weeklyTotal}</div>
+            </div>
+            <div className="total-card">
+              <h3>Monthly Total</h3>
+              <div className="amount">${monthlyTotal}</div>
+            </div>
+            <div className="total-card">
+              <h3>Yearly Total</h3>
+              <div className="amount">${yearlyTotal}</div>
+            </div>
+          </div>
+
+          {/* Input Section */}
+          <div className="input-section">
+            <h2 className="text-xl font-semibold text-white mb-2 w-full">Add New Tip</h2>
+            <input 
+              type="date" 
+              value={tipDate}
+              onChange={(e) => setTipDate(e.target.value)}
+              required 
+            />
+            <input 
+              type="number" 
+              value={tipAmount}
+              onChange={(e) => setTipAmount(e.target.value)}
+              placeholder="Enter tip amount" 
+              step="0.01" 
+              min="0" 
+              required 
+            />
+            <button onClick={addTip}>Add Tip</button>
           </div>
 
           {/* List of Tips */}
           <div className="tip-list">
-            <h3>Tip History</h3>
-            <ul id="tipList">
-              {tips.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((tip, index) => (
-                <li key={`${tip.date}-${index}`}>
-                  {tip.date}: ${tip.amount.toFixed(2)}
-                  <span>
-                    <button onClick={() => editTip(index)}>Edit</button>
-                    <button onClick={() => deleteTip(index)}>Delete</button>
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <h2 className="text-xl font-semibold text-white">
+              Tip History
+              <span className="text-sm text-gray-400 font-normal">
+                {tips.length} {tips.length === 1 ? 'entry' : 'entries'}
+              </span>
+            </h2>
+            {tips.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                No tips recorded yet. Add your first tip to see it here.
+              </div>
+            ) : (
+              <ul>
+                {tips
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .map((tip, index) => (
+                    <li key={`${tip.date}-${index}`}>
+                      <span className="date">
+                        {new Date(tip.date).toLocaleDateString('en-US', { 
+                          weekday: 'short', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </span>
+                      <span className="amount">${tip.amount.toFixed(2)}</span>
+                      <span className="actions">
+                        <button 
+                          className="edit-btn"
+                          onClick={() => editTip(index)}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          className="delete-btn"
+                          onClick={() => deleteTip(index)}
+                        >
+                          Delete
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            )}
           </div>
 
           {/* Calendar View */}
-          <div className="calendar-view" id="calendarView"></div>
+          <div className="calendar-container">
+            <div className="calendar-header">
+              <h2 className="calendar-title">
+                {selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h2>
+              <div className="calendar-nav">
+                <button onClick={() => changeMonth(-1)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path fillRule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                  </svg>
+                </button>
+                <button onClick={() => setSelectedMonth(new Date())}>
+                  Today
+                </button>
+                <button onClick={() => changeMonth(1)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="calendar-view" id="calendarView"></div>
+          </div>
         </div>
       </main>
     </div>

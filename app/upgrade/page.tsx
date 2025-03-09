@@ -89,7 +89,7 @@ export default function Upgrade() {
           <p className="text-xl text-gray-400 mb-8">You already have access to all premium features.</p>
           <button
             onClick={() => router.push('/dashboard')}
-            className="bg-white text-black font-bold py-3 px-8 rounded-lg hover:bg-gray-200 transition-colors"
+            className="bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold py-3 px-8 rounded-lg hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg transform hover:scale-105"
           >
             Go to Dashboard
           </button>
@@ -104,7 +104,7 @@ export default function Upgrade() {
         <Header />
         
         <div className="container mx-auto px-4 py-12">
-          <h1 className="text-4xl font-bold text-center mb-2">Upgrade to Premium</h1>
+          <h1 className="text-4xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">Upgrade to Premium</h1>
           <p className="text-xl text-gray-400 text-center mb-12">Unlock powerful features to maximize your earnings</p>
           
           {error && (
@@ -123,7 +123,7 @@ export default function Upgrade() {
           
           {loading ? (
             <div className="max-w-md mx-auto p-8 bg-gray-900 rounded-lg border border-gray-800 text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-white mb-4"></div>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-cyan-500 mb-4"></div>
               <p className="text-xl">Processing your upgrade...</p>
               <p className="text-gray-400 mt-2">Please wait, you'll be redirected to complete your payment.</p>
               <button
@@ -136,7 +136,7 @@ export default function Upgrade() {
           ) : (
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {/* Monthly Plan */}
-              <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-xl overflow-hidden shadow-xl transform transition-all hover:scale-105 hover:shadow-purple-500/10">
+              <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl overflow-hidden shadow-xl transform transition-all hover:scale-105 hover:shadow-cyan-500/10">
                 <div className="p-8">
                   <h3 className="text-2xl font-bold mb-2">Monthly</h3>
                   <div className="text-4xl font-bold mb-4">$6<span className="text-xl text-gray-400">/month</span></div>
@@ -144,25 +144,25 @@ export default function Upgrade() {
                   
                   <ul className="space-y-3 mb-8">
                     <li className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="h-5 w-5 text-cyan-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
                       Advanced Analytics
                     </li>
                     <li className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      AI Chat Assistant
-                    </li>
-                    <li className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="h-5 w-5 text-cyan-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
                       Earnings Projections
                     </li>
                     <li className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="h-5 w-5 text-cyan-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Data Export
+                    </li>
+                    <li className="flex items-center">
+                      <svg className="h-5 w-5 text-cyan-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
                       Cancel Anytime
@@ -171,7 +171,7 @@ export default function Upgrade() {
                   
                   <button
                     onClick={() => handleUpgradeClick('monthly')}
-                    className="w-full bg-white text-black font-bold py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="w-full bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold py-3 px-4 rounded-lg hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg"
                   >
                     Choose Monthly
                   </button>
@@ -179,8 +179,8 @@ export default function Upgrade() {
               </div>
               
               {/* Annual Plan */}
-              <div className="bg-gradient-to-br from-purple-900/40 to-black border border-purple-500/30 rounded-xl overflow-hidden shadow-xl transform transition-all hover:scale-105 hover:shadow-purple-500/20">
-                <div className="absolute top-0 right-0 bg-purple-600 text-white px-4 py-1 rounded-bl-lg font-medium text-sm">
+              <div className="bg-gradient-to-br from-cyan-900/40 to-black border border-cyan-500/30 rounded-xl overflow-hidden shadow-xl transform transition-all hover:scale-105 hover:shadow-cyan-500/20">
+                <div className="absolute top-0 right-0 bg-cyan-600 text-white px-4 py-1 rounded-bl-lg font-medium text-sm">
                   BEST VALUE
                 </div>
                 <div className="p-8">
@@ -190,31 +190,31 @@ export default function Upgrade() {
                   
                   <ul className="space-y-3 mb-8">
                     <li className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="h-5 w-5 text-cyan-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
                       Advanced Analytics
                     </li>
                     <li className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      AI Chat Assistant
-                    </li>
-                    <li className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="h-5 w-5 text-cyan-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
                       Earnings Projections
                     </li>
                     <li className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="h-5 w-5 text-cyan-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Data Export
+                    </li>
+                    <li className="flex items-center">
+                      <svg className="h-5 w-5 text-cyan-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
                       Priority Support
                     </li>
                     <li className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="h-5 w-5 text-cyan-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
                       58% Savings
@@ -223,7 +223,7 @@ export default function Upgrade() {
                   
                   <button
                     onClick={() => handleUpgradeClick('annual')}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:from-purple-500 hover:to-blue-500 transition-all shadow-lg"
+                    className="w-full bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:from-cyan-700 hover:to-teal-700 transition-all shadow-lg"
                   >
                     Choose Annual
                   </button>
