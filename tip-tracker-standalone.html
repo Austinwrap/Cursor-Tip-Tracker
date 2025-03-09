@@ -1,18 +1,3 @@
-'use client';
-
-import { useEffect } from 'react';
-
-export default function TipsPage() {
-  useEffect(() => {
-    // Only run in browser
-    if (typeof document === 'undefined') return;
-    
-    // Get the root element
-    const root = document.getElementById('root');
-    if (!root) return;
-    
-    // Set the HTML content directly from the user's code
-    document.documentElement.innerHTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -172,7 +157,7 @@ export default function TipsPage() {
             tips.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
             tips.forEach(tip => {
                 const li = document.createElement('li');
-                li.textContent = \`\${tip.date}: $\${tip.amount.toFixed(2)}\`;
+                li.textContent = `${tip.date}: $${tip.amount.toFixed(2)}`;
                 tipList.appendChild(li);
             });
         }
@@ -207,9 +192,13 @@ export default function TipsPage() {
 
             // Add days of the month
             for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = \`\${year}-\${String(month + 1).padStart(2, '0')}-\${String(day).padStart(2, '0')}\`;
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'calendar-day';
+                dayDiv.onclick = function() {
+                    document.getElementById('tipDate').value = dateStr;
+                    document.getElementById('tipAmount').focus();
+                };
                 const dayNum = document.createElement('span');
                 dayNum.textContent = day;
                 dayDiv.appendChild(dayNum);
@@ -221,7 +210,7 @@ export default function TipsPage() {
                     const total = dayTips.reduce((sum, tip) => sum + tip.amount, 0);
                     const tipText = document.createElement('span');
                     tipText.className = 'tip-text';
-                    tipText.textContent = \`$\${total.toFixed(2)}\`;
+                    tipText.textContent = `$${total.toFixed(2)}`;
                     dayDiv.appendChild(tipText);
                 }
 
@@ -230,18 +219,4 @@ export default function TipsPage() {
         }
     </script>
 </body>
-</html>
-    `;
-    
-    // Execute the script immediately
-    const scripts = document.getElementsByTagName('script');
-    for (let i = 0; i < scripts.length; i++) {
-      if (scripts[i].textContent) {
-        eval(scripts[i].textContent);
-      }
-    }
-  }, []);
-
-  // Return an empty div as a placeholder
-  return <div id="root"></div>;
-} 
+</html> 
