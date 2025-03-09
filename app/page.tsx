@@ -39,7 +39,7 @@ export default function Home() {
                   analyze earnings, and unlock financial insights.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="/tips" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-8 rounded-full hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg hover:shadow-blue-500/20 transform hover:scale-105 uppercase tracking-wider inline-block">
+                  <Link href="/dashboard" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-8 rounded-full hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg hover:shadow-blue-500/20 transform hover:scale-105 uppercase tracking-wider inline-block">
                     Try Tip Tracker
                   </Link>
                   <Link href="/upgrade" className="bg-transparent border-2 border-gray-700 text-white font-bold py-4 px-8 rounded-full hover:border-blue-500 hover:text-blue-400 transition-all uppercase tracking-wider inline-block">
