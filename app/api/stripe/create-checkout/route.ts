@@ -93,6 +93,15 @@ export async function POST(request: Request) {
     
     // Create a Stripe checkout session
     try {
+      // Check if stripe is null before using it
+      if (!stripe) {
+        console.error('Stripe client is not initialized');
+        return NextResponse.json(
+          { error: 'Stripe is not properly configured', details: 'Stripe client is null' },
+          { status: 500 }
+        );
+      }
+      
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
