@@ -231,9 +231,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <Header />
-      
+      <div className="min-h-screen bg-black text-white">
+        <Header />
+        
       <main className="container mx-auto px-4 py-6 safe-area-inset">
         <style jsx global>{`
           /* Safe area insets for modern iOS devices */
@@ -769,9 +769,9 @@ export default function Dashboard() {
                   ))}
               </ul>
             )}
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
   );
 } 
