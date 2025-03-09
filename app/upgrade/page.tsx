@@ -43,7 +43,13 @@ export default function Upgrade() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Checkout error:', errorData);
-        throw new Error(errorData.error || 'Failed to create checkout session');
+        
+        // Handle specific error cases
+        if (errorData.details && errorData.details.includes('The string did not match the expected pattern')) {
+          throw new Error('Stripe configuration error: The API keys are not properly set up. Please contact support.');
+        } else {
+          throw new Error(errorData.error || 'Failed to create checkout session');
+        }
       }
       
       const data = await response.json();
@@ -51,7 +57,7 @@ export default function Upgrade() {
       
       // Handle development mode
       if (data.dev) {
-        setMessage('Development mode: Upgrade successful!');
+        setMessage('Development mode: Upgrade successful! Redirecting to dashboard...');
         setTimeout(() => {
           router.push('/dashboard');
         }, 1500);

@@ -5,14 +5,14 @@ import { supabase } from '@/app/lib/supabase';
 // Initialize Stripe with the secret key if available
 let stripe: Stripe | null = null;
 try {
-  if (process.env.STRIPE_SECRET_KEY) {
+  if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('placeholder')) {
     // Initialize with API version to ensure compatibility
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2025-02-24.acacia', // Latest API version for compatibility
     });
     console.log('Stripe initialized successfully');
   } else {
-    console.warn('Stripe secret key not found. Using development mode.');
+    console.warn('Stripe secret key not found or is a placeholder. Using development mode.');
   }
 } catch (error) {
   console.error('Failed to initialize Stripe:', error);
@@ -40,9 +40,17 @@ export async function POST(request: Request) {
       );
     }
     
+    // Check if Stripe is properly configured
+    const isStripeMissingOrPlaceholder = !stripe || 
+                                        !process.env.STRIPE_SECRET_KEY || 
+                                        process.env.STRIPE_SECRET_KEY.includes('placeholder') ||
+                                        !process.env.STRIPE_MONTHLY_PRICE_ID ||
+                                        process.env.STRIPE_MONTHLY_PRICE_ID.includes('placeholder') ||
+                                        !process.env.STRIPE_ANNUAL_PRICE_ID ||
+                                        process.env.STRIPE_ANNUAL_PRICE_ID.includes('placeholder');
+    
     // In development mode or if Stripe is not configured, directly update the user's subscription status
-    if (!stripe || process.env.NODE_ENV === 'development' || !process.env.STRIPE_SECRET_KEY || 
-        process.env.STRIPE_SECRET_KEY.includes('placeholder')) {
+    if (isStripeMissingOrPlaceholder || process.env.NODE_ENV === 'development') {
       console.log('Development mode or Stripe not configured: Enabling premium without Stripe payment');
       
       // Update the user's is_paid status in the database
