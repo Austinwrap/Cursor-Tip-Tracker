@@ -13,15 +13,20 @@ import {
   FormControl,
   FormLabel,
   Input,
+  Textarea,
   useToast,
   VStack,
   Text,
   Box,
-  Code
+  Code,
+  HStack,
+  Select
 } from '@chakra-ui/react';
 
 export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSaved }) {
   const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [tipType, setTipType] = useState('cash');
   const [isLoading, setIsLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState('');
   const toast = useToast();
@@ -49,15 +54,15 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
     return String(date);
   };
 
-  // ULTRA simple submit handler - just save the number!
+  // Advanced submit handler with additional fields
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Basic validation
-    if (!amount || isNaN(Number(amount))) {
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       toast({
         title: 'Invalid amount',
-        description: 'Please enter a valid number',
+        description: 'Please enter a valid tip amount',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -69,7 +74,7 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
     setDebugInfo('Saving tip...');
     
     try {
-      // Log all the information for debugging
+      // Format the date as YYYY-MM-DD
       const formattedDate = date instanceof Date 
         ? date.toISOString().split('T')[0] 
         : typeof date === 'string' 
@@ -81,14 +86,16 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
         date: date instanceof Date ? date.toISOString() : date,
         formattedDate,
         amount, 
-        numericAmount: Number(amount)
+        numericAmount: Number(amount),
+        note,
+        tipType
       };
       
       console.log('Submitting tip with data:', debugData);
       setDebugInfo(`Submitting: ${JSON.stringify(debugData, null, 2)}`);
       
-      // Call the simplified addTip function
-      const { data, error } = await addTip(userId, formattedDate, amount);
+      // Call the addTip function
+      const { data, error } = await addTip(userId, formattedDate, amount, note, tipType);
       
       if (error) {
         console.error('Error saving tip:', error);
@@ -114,6 +121,8 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
         
         // Reset form and close
         setAmount('');
+        setNote('');
+        setTipType('cash');
         onTipSaved();
         onClose();
       }
@@ -133,16 +142,16 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Add Tip for {formatDate(date)}</ModalHeader>
-        <ModalCloseButton />
+    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+      <ModalOverlay backdropFilter="blur(3px)" />
+      <ModalContent bg="#2a2a2a" color="#e0e0e0" borderColor="#4d4d4d">
+        <ModalHeader color="#aaffaa">Advanced Tip Entry for {formatDate(date)}</ModalHeader>
+        <ModalCloseButton color="#e0e0e0" />
         <ModalBody pb={6}>
           <form onSubmit={handleSubmit}>
             <VStack spacing={4} align="stretch">
               <FormControl isRequired>
-                <FormLabel>Amount ($)</FormLabel>
+                <FormLabel color="#e0e0e0">Amount ($)</FormLabel>
                 <Input
                   type="number"
                   value={amount}
@@ -150,31 +159,79 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
                   placeholder="Enter tip amount"
                   min="0"
                   step="0.01"
+                  bg="#333"
+                  borderColor="#4d4d4d"
+                  _hover={{ borderColor: "#aaffaa" }}
+                  _focus={{ borderColor: "#aaffaa", boxShadow: "0 0 0 1px #aaffaa" }}
+                  autoFocus
+                />
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel color="#e0e0e0">Tip Type</FormLabel>
+                <Select 
+                  value={tipType}
+                  onChange={(e) => setTipType(e.target.value)}
+                  bg="#333"
+                  borderColor="#4d4d4d"
+                  _hover={{ borderColor: "#aaffaa" }}
+                  _focus={{ borderColor: "#aaffaa", boxShadow: "0 0 0 1px #aaffaa" }}
+                >
+                  <option value="cash">Cash</option>
+                  <option value="credit">Credit Card</option>
+                  <option value="digital">Digital Payment</option>
+                  <option value="other">Other</option>
+                </Select>
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel color="#e0e0e0">Notes (optional)</FormLabel>
+                <Textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Add any notes about this tip"
+                  bg="#333"
+                  borderColor="#4d4d4d"
+                  _hover={{ borderColor: "#aaffaa" }}
+                  _focus={{ borderColor: "#aaffaa", boxShadow: "0 0 0 1px #aaffaa" }}
+                  rows={3}
                 />
               </FormControl>
               
               {debugInfo && (
                 <Box 
                   p={2} 
-                  bg="gray.100" 
+                  bg="#1a1a1a" 
                   borderRadius="md" 
                   fontSize="xs" 
                   fontFamily="monospace"
                   overflowX="auto"
                 >
-                  <Code whiteSpace="pre-wrap">{debugInfo}</Code>
+                  <Code whiteSpace="pre-wrap" bg="transparent" color="#aaffaa">{debugInfo}</Code>
                 </Box>
               )}
               
-              <Button 
-                colorScheme="blue" 
-                type="submit" 
-                isLoading={isLoading}
-                width="100%"
-                mt={4}
-              >
-                Save Tip
-              </Button>
+              <HStack spacing={4} justify="flex-end">
+                <Button 
+                  variant="outline" 
+                  onClick={onClose}
+                  borderColor="#4d4d4d"
+                  color="#e0e0e0"
+                  _hover={{ bg: "#444" }}
+                >
+                  Cancel
+                </Button>
+                
+                <Button 
+                  colorScheme="green" 
+                  type="submit" 
+                  isLoading={isLoading}
+                  bg="#4CAF50"
+                  _hover={{ bg: "#45a049" }}
+                >
+                  Save Tip
+                </Button>
+              </HStack>
             </VStack>
           </form>
         </ModalBody>

@@ -18,14 +18,14 @@ export const supabase = isBrowser()
     })
   : null;
 
-// SUPER SIMPLE function to add a tip - just save the number!
-export async function addTip(userId, date, amount) {
+// Enhanced function to add a tip with optional fields
+export async function addTip(userId, date, amount, note = '', tipType = 'cash') {
   if (!isBrowser()) {
     console.error('addTip called on server side');
     return { error: { message: 'Cannot add tip on server side' } };
   }
   
-  console.log('Saving tip:', { userId, date, amount });
+  console.log('Saving tip:', { userId, date, amount, note, tipType });
   
   try {
     // Format the date as YYYY-MM-DD
@@ -42,9 +42,9 @@ export async function addTip(userId, date, amount) {
       return { error: { message: 'User ID is required' } };
     }
     
-    if (isNaN(numericAmount)) {
+    if (isNaN(numericAmount) || numericAmount <= 0) {
       console.error('Invalid amount:', amount);
-      return { error: { message: 'Amount must be a number' } };
+      return { error: { message: 'Amount must be a positive number' } };
     }
     
     // First check if a tip already exists for this date
@@ -67,7 +67,11 @@ export async function addTip(userId, date, amount) {
       console.log('Updating existing tip:', existingTip.id);
       result = await supabase
         .from('tips')
-        .update({ amount: numericAmount })
+        .update({ 
+          amount: numericAmount,
+          note: note || existingTip.note || '',
+          type: tipType || existingTip.type || 'cash'
+        })
         .eq('id', existingTip.id);
     } else {
       // Insert new tip
@@ -77,7 +81,9 @@ export async function addTip(userId, date, amount) {
         .insert([{ 
           user_id: userId, 
           date: formattedDate, 
-          amount: numericAmount 
+          amount: numericAmount,
+          note: note || '',
+          type: tipType || 'cash'
         }]);
     }
     
@@ -112,7 +118,8 @@ export async function getUserTips(userId) {
     const { data, error } = await supabase
       .from('tips')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
     
     if (error) {
       console.error('Supabase error:', error);
@@ -123,6 +130,42 @@ export async function getUserTips(userId) {
     return { data: data || [], error: null };
   } catch (err) {
     console.error('Error in getUserTips:', err);
+    return { data: [], error: { message: err.message } };
+  }
+}
+
+// Get tips for a specific date range
+export async function getTipsByDateRange(userId, startDate, endDate) {
+  if (!isBrowser()) {
+    console.error('getTipsByDateRange called on server side');
+    return { data: [], error: { message: 'Cannot get tips on server side' } };
+  }
+  
+  if (!userId) {
+    console.error('No user ID provided');
+    return { data: [], error: { message: 'User ID is required' } };
+  }
+  
+  try {
+    console.log('Getting tips for date range:', { userId, startDate, endDate });
+    
+    const { data, error } = await supabase
+      .from('tips')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
+    
+    if (error) {
+      console.error('Supabase error:', error);
+      return { data: [], error };
+    }
+    
+    console.log('Got tips for date range:', data);
+    return { data: data || [], error: null };
+  } catch (err) {
+    console.error('Error in getTipsByDateRange:', err);
     return { data: [], error: { message: err.message } };
   }
 } 
