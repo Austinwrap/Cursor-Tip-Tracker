@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client with hardcoded values for static export
-const supabaseUrl = 'https://bggsscexogsptcnnwckj.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZ3NzY2V4b2dzcHRjbm53Y2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEzNjgwMDQsImV4cCI6MjA1Njk0NDAwNH0.yRmBEA5ddBqoM-N9iOjQpyMtxQcBlbEUJ-diV396J94';
+// Initialize Supabase client with environment variables or fallback to hardcoded values
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bggsscexogsptcnnwckj.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZ3NzY2V4b2dzcHRjbm53Y2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEzNjgwMDQsImV4cCI6MjA1Njk0NDAwNH0.yRmBEA5ddBqoM-N9iOjQpyMtxQcBlbEUJ-diV396J94';
 
 // Helper function to check if we're in a browser environment
 export const isBrowser = () => typeof window !== 'undefined';
