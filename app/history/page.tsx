@@ -26,7 +26,7 @@ export default function History() {
 
   // Load tips from Supabase
   useEffect(() => {
-    if (typeof window === 'undefined' || !user) return;
+    if (!user) return;
     
     const loadTips = async () => {
       setIsLoading(true);
@@ -68,7 +68,7 @@ export default function History() {
         }
       } catch (error) {
         console.error('Error loading tips:', error);
-        setSyncStatus('Error loading tips');
+        setSyncStatus('Error loading tips from database');
         
         // Fall back to localStorage if there's an error
         const storageKey = `tips_${user.id}`;
@@ -78,6 +78,7 @@ export default function History() {
           setTips(parsedTips);
           setFilteredTips(parsedTips);
           calculateTotal(parsedTips);
+          setSyncStatus('Using locally stored tips (offline mode)');
         }
       } finally {
         setIsLoading(false);
@@ -176,7 +177,7 @@ export default function History() {
     return monthlyData;
   };
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <main className="min-h-screen bg-black text-white">
         <Header />
@@ -308,8 +309,8 @@ export default function History() {
                           className="w-full bg-gradient-to-t from-cyan-600 to-teal-400 rounded-t-md"
                           style={{ height: `${percentage}%` }}
                         ></div>
-                        <div className="text-xs mt-2 text-gray-400">{month}</div>
-                        <div className="text-xs font-semibold text-white">${amount.toFixed(0)}</div>
+                        <div className="text-xs text-gray-400 mt-2 truncate w-full text-center">{month}</div>
+                        <div className="text-xs font-semibold text-cyan-400">${amount.toFixed(0)}</div>
                       </div>
                     );
                   })}
@@ -319,46 +320,40 @@ export default function History() {
           </div>
           
           {/* Tip List */}
-          <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl overflow-hidden shadow-lg">
-            <div className="p-6 border-b border-gray-800">
-              <h2 className="text-xl font-semibold text-cyan-400">Detailed History</h2>
-            </div>
+          <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
+            <h2 className="text-xl font-semibold text-cyan-400 mb-4">Tip Details</h2>
             
-            {filteredTips.length === 0 ? (
-              <div className="p-8 text-center text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <p className="text-lg">No tips found for the selected period</p>
-                <p className="mt-2 text-sm">Try changing your filter or add some tips in the dashboard</p>
-              </div>
-            ) : (
+            {filteredTips.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-900/80 text-gray-400 text-xs uppercase">
-                    <tr>
-                      <th className="px-6 py-3 text-left">Date</th>
-                      <th className="px-6 py-3 text-right">Amount</th>
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      <th className="text-left py-2 px-4 text-gray-400">Date</th>
+                      <th className="text-right py-2 px-4 text-gray-400">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800">
+                  <tbody>
                     {filteredTips.map((tip, index) => (
-                      <tr 
-                        key={`${tip.date}-${index}`} 
-                        className="bg-gray-900/30 hover:bg-gray-800/50 transition-colors"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-white">{formatDate(tip.date)}</div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="text-cyan-400 font-bold">${tip.amount.toFixed(2)}</div>
-                        </td>
+                      <tr key={`${tip.date}-${index}`} className="border-b border-gray-800">
+                        <td className="py-2 px-4">{formatDate(tip.date)}</td>
+                        <td className="py-2 px-4 text-right text-cyan-400">${tip.amount.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+            ) : (
+              <p className="text-gray-400 text-center py-8">No tips found for the selected filter.</p>
             )}
+          </div>
+          
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold py-3 px-8 rounded-lg hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg"
+            >
+              Back to Dashboard
+            </button>
           </div>
         </div>
       </div>

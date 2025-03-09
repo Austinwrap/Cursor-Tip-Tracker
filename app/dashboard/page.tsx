@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [tipAmount, setTipAmount] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Redirect to signin if not authenticated
   useEffect(() => {
@@ -26,16 +27,16 @@ export default function Dashboard() {
     }
   }, [user, loading, router]);
 
+  // Load tips from Supabase when user is authenticated
   useEffect(() => {
-    // Only run in browser and if user is authenticated
-    if (typeof window === 'undefined' || !user) return;
+    if (!user) return;
     
     const loadTips = async () => {
       setIsLoading(true);
       setSyncStatus('Loading tips...');
       
       try {
-        // Try to load tips from Supabase first
+        // Always try to load from Supabase first
         const supabaseTips = await getSupabaseTips(user.id);
         
         if (supabaseTips && supabaseTips.length > 0) {
@@ -47,12 +48,12 @@ export default function Dashboard() {
           
           setTips(formattedTips);
           
-          // Also update localStorage with the latest data
+          // Also update localStorage as a backup
           const storageKey = `tips_${user.id}`;
           localStorage.setItem(storageKey, JSON.stringify(formattedTips));
           setSyncStatus('Tips loaded from database');
         } else {
-          // Fall back to localStorage if no tips in Supabase
+          // If no tips in Supabase, check localStorage as a fallback
           const storageKey = `tips_${user.id}`;
           const storedTips = localStorage.getItem(storageKey);
           
@@ -61,22 +62,41 @@ export default function Dashboard() {
             setTips(parsedTips);
             
             // Sync localStorage tips to Supabase
+            setIsSyncing(true);
             setSyncStatus('Syncing tips to database...');
+            
+            let syncCount = 0;
             for (const tip of parsedTips) {
-              await saveTipToSupabase(user.id, tip.date, tip.amount);
+              const success = await saveTipToSupabase(user.id, tip.date, tip.amount);
+              if (success) syncCount++;
             }
-            setSyncStatus('Tips synced to database');
+            
+            setSyncStatus(`Synced ${syncCount} of ${parsedTips.length} tips to database`);
+            setIsSyncing(false);
+            
+            // Reload from Supabase to ensure consistency
+            const refreshedTips = await getSupabaseTips(user.id);
+            if (refreshedTips && refreshedTips.length > 0) {
+              const refreshedFormattedTips = refreshedTips.map(tip => ({
+                date: tip.date,
+                amount: tip.amount
+              }));
+              setTips(refreshedFormattedTips);
+            }
+          } else {
+            setSyncStatus('No tips found');
           }
         }
       } catch (error) {
         console.error('Error loading tips:', error);
-        setSyncStatus('Error loading tips');
+        setSyncStatus('Error loading tips from database');
         
         // Fall back to localStorage if there's an error
         const storageKey = `tips_${user.id}`;
         const storedTips = localStorage.getItem(storageKey);
         if (storedTips) {
           setTips(JSON.parse(storedTips));
+          setSyncStatus('Using locally stored tips (offline mode)');
         }
       } finally {
         setIsLoading(false);
@@ -116,25 +136,44 @@ export default function Dashboard() {
     setSyncStatus('Saving tip...');
 
     try {
-      // Save to Supabase
+      // Always save to Supabase first
       const success = await saveTipToSupabase(user.id, date, amount);
       
       if (success) {
-        // Update local state
+        // If successful, update local state
         const newTips = [...tips, { date, amount }];
         setTips(newTips);
         
-        // Also update localStorage
+        // Also update localStorage as a backup
         const storageKey = `tips_${user.id}`;
         localStorage.setItem(storageKey, JSON.stringify(newTips));
         
         setSyncStatus('Tip saved successfully');
+        
+        // Reload from Supabase to ensure consistency
+        const refreshedTips = await getSupabaseTips(user.id);
+        if (refreshedTips && refreshedTips.length > 0) {
+          const refreshedFormattedTips = refreshedTips.map(tip => ({
+            date: tip.date,
+            amount: tip.amount
+          }));
+          setTips(refreshedFormattedTips);
+        }
       } else {
         setSyncStatus('Error saving tip to database');
       }
     } catch (error) {
       console.error('Error saving tip:', error);
       setSyncStatus('Error saving tip');
+      
+      // Fall back to local storage only if Supabase fails
+      const newTips = [...tips, { date, amount }];
+      setTips(newTips);
+      
+      const storageKey = `tips_${user.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(newTips));
+      
+      setSyncStatus('Tip saved locally only (offline mode)');
     } finally {
       setIsLoading(false);
     }
@@ -159,26 +198,46 @@ export default function Dashboard() {
         const date = tips[index].date;
         const amount = parseFloat(newAmount);
         
-        // Update in Supabase
+        // Update in Supabase first
         const success = await saveTipToSupabase(user.id, date, amount);
         
         if (success) {
-          // Update local state
+          // If successful, update local state
           const newTips = [...tips];
           newTips[index].amount = amount;
           setTips(newTips);
           
-          // Also update localStorage
+          // Also update localStorage as a backup
           const storageKey = `tips_${user.id}`;
           localStorage.setItem(storageKey, JSON.stringify(newTips));
           
           setSyncStatus('Tip updated successfully');
+          
+          // Reload from Supabase to ensure consistency
+          const refreshedTips = await getSupabaseTips(user.id);
+          if (refreshedTips && refreshedTips.length > 0) {
+            const refreshedFormattedTips = refreshedTips.map(tip => ({
+              date: tip.date,
+              amount: tip.amount
+            }));
+            setTips(refreshedFormattedTips);
+          }
         } else {
           setSyncStatus('Error updating tip in database');
         }
       } catch (error) {
         console.error('Error updating tip:', error);
         setSyncStatus('Error updating tip');
+        
+        // Fall back to local update if Supabase fails
+        const newTips = [...tips];
+        newTips[index].amount = parseFloat(newAmount);
+        setTips(newTips);
+        
+        const storageKey = `tips_${user.id}`;
+        localStorage.setItem(storageKey, JSON.stringify(newTips));
+        
+        setSyncStatus('Tip updated locally only (offline mode)');
       } finally {
         setIsLoading(false);
       }
@@ -202,39 +261,42 @@ export default function Dashboard() {
         const supabaseTips = await getSupabaseTips(user.id);
         const tipToDelete = supabaseTips.find(tip => tip.date === date);
         
+        let success = false;
+        
         if (tipToDelete) {
           // Delete from Supabase
-          const success = await deleteSupabaseTip(tipToDelete.id, user.id);
-          
-          if (success) {
-            // Update local state
-            const newTips = [...tips];
-            newTips.splice(index, 1);
-            setTips(newTips);
-            
-            // Also update localStorage
-            const storageKey = `tips_${user.id}`;
-            localStorage.setItem(storageKey, JSON.stringify(newTips));
-            
-            setSyncStatus('Tip deleted successfully');
-          } else {
-            setSyncStatus('Error deleting tip from database');
-          }
+          success = await deleteSupabaseTip(tipToDelete.id, user.id);
+        }
+        
+        // Update local state regardless of Supabase result
+        const newTips = [...tips];
+        newTips.splice(index, 1);
+        setTips(newTips);
+        
+        // Also update localStorage
+        const storageKey = `tips_${user.id}`;
+        localStorage.setItem(storageKey, JSON.stringify(newTips));
+        
+        if (success) {
+          setSyncStatus('Tip deleted successfully');
+        } else if (tipToDelete) {
+          setSyncStatus('Error deleting tip from database, but removed locally');
         } else {
-          // If tip not found in Supabase, just update local state
-          const newTips = [...tips];
-          newTips.splice(index, 1);
-          setTips(newTips);
-          
-          // Also update localStorage
-          const storageKey = `tips_${user.id}`;
-          localStorage.setItem(storageKey, JSON.stringify(newTips));
-          
-          setSyncStatus('Tip deleted from local storage');
+          setSyncStatus('Tip deleted locally only');
+        }
+        
+        // Reload from Supabase to ensure consistency
+        const refreshedTips = await getSupabaseTips(user.id);
+        if (refreshedTips) {
+          const refreshedFormattedTips = refreshedTips.map(tip => ({
+            date: tip.date,
+            amount: tip.amount
+          }));
+          setTips(refreshedFormattedTips);
         }
       } catch (error) {
         console.error('Error deleting tip:', error);
-        setSyncStatus('Error deleting tip');
+        setSyncStatus('Error with database, tip deleted locally only');
         
         // Fall back to just updating local state
         const newTips = [...tips];
@@ -393,554 +455,269 @@ export default function Dashboard() {
   }
 
   return (
-      <div className="min-h-screen bg-black text-white">
-        <Header />
+    <div className="min-h-screen bg-black text-white">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">Tip Tracker Dashboard</h1>
         
-      <main className="container mx-auto px-4 py-6 safe-area-inset">
-        <style jsx global>{`
-          /* Safe area insets for modern iOS devices */
-          .safe-area-inset {
-            padding-left: env(safe-area-inset-left);
-            padding-right: env(safe-area-inset-right);
-            padding-bottom: env(safe-area-inset-bottom);
-          }
-          
-          .input-section, .totals-section, .tip-list, .calendar-container {
-            background: linear-gradient(145deg, #141414, #1c1c1c);
-            border: 1px solid #00a3af;
-            padding: 16px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 163, 175, 0.15);
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-          }
-          
-          .input-section:hover, .totals-section:hover, .tip-list:hover, .calendar-container:hover {
-            box-shadow: 0 8px 30px rgba(0, 163, 175, 0.25);
-            border-color: #00a3af;
-          }
-          
-          .input-section::before, .totals-section::before, .tip-list::before, .calendar-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(145deg, rgba(0, 163, 175, 0.05), rgba(0, 163, 175, 0));
-            pointer-events: none;
-          }
-          
-          .input-section {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-          }
-          
-          .input-section input, .input-section button {
-            padding: 12px 16px;
-            border-radius: 8px;
-            border: 1px solid #00a3af;
-            background: #222222;
-            color: #ffffff;
-            font-size: 14px;
-            flex: 1;
-            min-width: 100px;
-            box-shadow: 0 2px 8px rgba(0, 163, 175, 0.2);
-            transition: all 0.3s ease;
-            -webkit-appearance: none; /* Remove default iOS styling */
-          }
-          
-          .input-section input:focus, .input-section button:focus {
-            outline: none;
-            box-shadow: 0 0 12px rgba(0, 163, 175, 0.5);
-            border-color: #00a3af;
-          }
-          
-          .input-section button {
-            background: linear-gradient(135deg, #00a3af, #0088a3);
-            color: #fff;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          
-          .input-section button:hover {
-            background: linear-gradient(135deg, #00b8c6, #009bb8);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(0, 163, 175, 0.4);
-          }
-          
-          .input-section button:active {
-            transform: translateY(1px);
-          }
-          
-          .totals-section {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            font-size: 14px;
-          }
-          
-          .total-card {
-            background: linear-gradient(145deg, #1a1a1a, #222222);
-            padding: 16px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid #00a3af;
-            box-shadow: 0 4px 12px rgba(0, 163, 175, 0.1);
-            transition: all 0.3s ease;
-          }
-          
-          .total-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 163, 175, 0.2);
-          }
-          
-          .total-card h3 {
-            font-size: 14px;
-            color: #00a3af;
-            margin-bottom: 8px;
-          }
-          
-          .total-card .amount {
-            font-size: 24px;
-            font-weight: 700;
-            color: white;
-          }
-          
-          .tip-list {
-            margin-top: 24px;
-          }
-          
-          .tip-list h2 {
-            margin-bottom: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          
-          .tip-list ul {
-            list-style: none;
-            padding: 0;
-            max-height: 240px;
-            overflow-y: auto;
-            margin: 0;
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-          }
-          
-          .tip-list li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            border-bottom: 1px solid #333;
-            font-size: 14px;
-            transition: background 0.2s ease;
-          }
-          
-          .tip-list li:hover {
-            background: rgba(0, 163, 175, 0.05);
-          }
-          
-          .tip-list li:last-child {
-            border-bottom: none;
-          }
-          
-          .tip-list .date {
-            font-weight: 500;
-          }
-          
-          .tip-list .amount {
-            font-weight: 700;
-            color: #00a3af;
-          }
-          
-          .tip-list .actions {
-            display: flex;
-            gap: 8px;
-          }
-          
-          .tip-list button {
-            background: none;
-            border: 1px solid;
-            cursor: pointer;
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-          }
-          
-          .tip-list .edit-btn {
-            border-color: #00a3af;
-            color: #00a3af;
-          }
-          
-          .tip-list .edit-btn:hover {
-            background: rgba(0, 163, 175, 0.1);
-          }
-          
-          .tip-list .delete-btn {
-            border-color: #ff5555;
-            color: #ff5555;
-          }
-          
-          .tip-list .delete-btn:hover {
-            background: rgba(255, 85, 85, 0.1);
-          }
-          
-          .calendar-container {
-            margin-top: 24px;
-          }
-          
-          .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-          }
-          
-          .calendar-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #00a3af;
-          }
-          
-          .calendar-nav {
-            display: flex;
-            gap: 12px;
-          }
-          
-          .calendar-nav button {
-            background: none;
-            border: 1px solid #00a3af;
-            color: #00a3af;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-          }
-          
-          .calendar-nav button:hover {
-            background: rgba(0, 163, 175, 0.1);
-            transform: scale(1.05);
-          }
-          
-          .calendar-view {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
-            text-align: center;
-          }
-          
-          .calendar-day {
-            padding: 8px;
-            background: linear-gradient(145deg, #1e1e1e, #252525);
-            border: 1px solid #333;
-            border-radius: 8px;
-            min-height: 60px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-          }
-          
-          .calendar-day:hover {
-            background: linear-gradient(145deg, #252525, #2a2a2a);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            border-color: #00a3af;
-          }
-          
-          .calendar-day.empty {
-            background: transparent;
-            border-color: transparent;
-            cursor: default;
-          }
-          
-          .calendar-day.empty:hover {
-            transform: none;
-            box-shadow: none;
-          }
-          
-          .calendar-day.has-tip {
-            background: linear-gradient(145deg, #1a2a2a, #203030);
-            border-color: #00a3af;
-          }
-          
-          .calendar-day.today {
-            border: 2px solid #00a3af;
-            box-shadow: 0 0 10px rgba(0, 163, 175, 0.3);
-          }
-          
-          .calendar-day span:first-child {
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 4px;
-          }
-          
-          .calendar-day .tip-text {
-            font-size: 12px;
-            color: #00a3af;
-            font-weight: 600;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-            padding: 2px 6px;
-          }
-          
-          .section-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: #00a3af;
-            text-align: center;
-            position: relative;
-            display: inline-block;
-          }
-          
-          .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #00a3af, transparent);
-          }
-          
-          .dashboard-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
-            max-width: 1000px;
-            margin: 0 auto;
-          }
-          
-          @media (min-width: 768px) {
-            .dashboard-container {
-              grid-template-columns: 1fr 1fr;
-            }
-            
-            .totals-section {
-              grid-column: span 2;
-            }
-          }
-          
-          @media (max-width: 640px) {
-            .input-section {
-              flex-direction: column;
-            }
-            
-            .input-section input, .input-section button {
-              width: 100%;
-              font-size: 16px; /* Larger font for better touch targets */
-              padding: 14px 16px; /* Taller inputs for better touch targets */
-            }
-            
-            .totals-section {
-              grid-template-columns: 1fr;
-              gap: 8px;
-            }
-            
-            .calendar-day {
-              min-height: 45px;
-              padding: 4px;
-            }
-            
-            .calendar-day span:first-child {
-              font-size: 12px;
-            }
-            
-            .calendar-day .tip-text {
-              font-size: 10px;
-            }
-            
-            .tip-list li {
-              padding: 14px 8px; /* Taller list items for better touch targets */
-            }
-            
-            .tip-list .actions {
-              gap: 4px;
-            }
-            
-            .tip-list button {
-              padding: 6px 10px; /* Larger buttons for better touch targets */
-              font-size: 13px;
-            }
-          }
-          
-          /* iPhone-specific optimizations */
-          @media screen and (max-width: 428px) { /* iPhone 13 Pro Max width */
-            .calendar-view {
-              gap: 4px;
-            }
-            
-            .calendar-day {
-              min-height: 40px;
-              padding: 2px;
-            }
-            
-            .calendar-day span:first-child {
-              font-size: 11px;
-            }
-            
-            .calendar-day .tip-text {
-              font-size: 9px;
-              padding: 1px 3px;
-            }
-            
-            .section-title {
-              font-size: 20px;
-            }
-            
-            .total-card .amount {
-              font-size: 20px;
-            }
-            
-            .total-card h3 {
-              font-size: 12px;
-            }
-            
-            .tip-list .date {
-              font-size: 13px;
-            }
-            
-            .tip-list .amount {
-              font-size: 13px;
-            }
-          }
-        `}</style>
-
-        <h1 className="section-title mx-auto text-center mb-6">Tip Tracker</h1>
-
+        {/* Status message */}
+        {syncStatus && (
+          <div className={`text-center mb-4 text-sm ${syncStatus.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
+            {syncStatus}
+            {isSyncing && (
+              <span className="inline-block ml-2 w-4 h-4 border-t-2 border-green-400 rounded-full animate-spin"></span>
+            )}
+          </div>
+        )}
+        
+        {/* Sync button */}
+        <div className="text-center mb-6">
+          <button 
+            onClick={async () => {
+              if (!user) return;
+              
+              setIsSyncing(true);
+              setSyncStatus('Syncing with database...');
+              
+              try {
+                // Get latest from Supabase
+                const supabaseTips = await getSupabaseTips(user.id);
+                
+                if (supabaseTips && supabaseTips.length > 0) {
+                  const formattedTips = supabaseTips.map(tip => ({
+                    date: tip.date,
+                    amount: tip.amount
+                  }));
+                  
+                  setTips(formattedTips);
+                  
+                  // Update localStorage
+                  const storageKey = `tips_${user.id}`;
+                  localStorage.setItem(storageKey, JSON.stringify(formattedTips));
+                  
+                  setSyncStatus('Synced successfully with database');
+                } else {
+                  // If no tips in Supabase, sync from localStorage
+                  const storageKey = `tips_${user.id}`;
+                  const storedTips = localStorage.getItem(storageKey);
+                  
+                  if (storedTips) {
+                    const parsedTips = JSON.parse(storedTips);
+                    
+                    let syncCount = 0;
+                    for (const tip of parsedTips) {
+                      const success = await saveTipToSupabase(user.id, tip.date, tip.amount);
+                      if (success) syncCount++;
+                    }
+                    
+                    setSyncStatus(`Synced ${syncCount} of ${parsedTips.length} tips to database`);
+                  } else {
+                    setSyncStatus('No tips to sync');
+                  }
+                }
+              } catch (error) {
+                console.error('Error syncing tips:', error);
+                setSyncStatus('Error syncing with database');
+              } finally {
+                setIsSyncing(false);
+              }
+            }}
+            disabled={isSyncing}
+            className="bg-gray-800 hover:bg-gray-700 text-white text-sm py-1 px-4 rounded-full transition-colors disabled:opacity-50"
+          >
+            {isSyncing ? 'Syncing...' : 'Sync Tips'}
+          </button>
+        </div>
+        
         <div className="dashboard-container">
-          {/* Status message */}
-          {syncStatus && (
-            <div className={`text-center mb-4 text-sm ${syncStatus.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
-              {syncStatus}
-            </div>
-          )}
-
           {/* Totals Section */}
           <div className="totals-section">
-            <div className="total-card">
-              <h3>Weekly Total</h3>
-              <div className="amount">${weeklyTotal}</div>
-            </div>
-            <div className="total-card">
-              <h3>Monthly Total</h3>
-              <div className="amount">${monthlyTotal}</div>
-            </div>
-            <div className="total-card">
-              <h3>Yearly Total</h3>
-              <div className="amount">${yearlyTotal}</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-400 mb-2">This Week</h3>
+                <p className="text-3xl font-bold text-white">${weeklyTotal}</p>
+              </div>
+              <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-400 mb-2">This Month</h3>
+                <p className="text-3xl font-bold text-white">${monthlyTotal}</p>
+              </div>
+              <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-400 mb-2">This Year</h3>
+                <p className="text-3xl font-bold text-white">${yearlyTotal}</p>
+              </div>
             </div>
           </div>
-
-          {/* Input Section */}
-          <div className="input-section">
-            <h2 className="text-xl font-semibold text-white mb-2 w-full">Add New Tip</h2>
-            <input 
-              type="date" 
-              value={tipDate}
-              onChange={(e) => setTipDate(e.target.value)}
-              required 
-            />
-            <input 
-              type="number" 
-              value={tipAmount}
-              onChange={(e) => setTipAmount(e.target.value)}
-              placeholder="Enter tip amount" 
-              step="0.01" 
-              min="0" 
-              required 
-            />
-            <button onClick={addTip}>Add Tip</button>
-          </div>
-
-          {/* Calendar View */}
-          <div className="calendar-container">
-            <div className="calendar-header">
-              <h2 className="calendar-title">
-                {selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </h2>
-              <div className="calendar-nav">
-                <button onClick={() => changeMonth(-1)}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path fillRule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+          
+          {/* Calendar Section */}
+          <div className="calendar-section mb-8">
+            <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <button 
+                  onClick={() => changeMonth(-1)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <button onClick={() => setSelectedMonth(new Date())}>
-                  Today
-                </button>
-                <button onClick={() => changeMonth(1)}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                <h3 className="text-xl font-bold">
+                  {selectedMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </h3>
+                <button 
+                  onClick={() => changeMonth(1)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
               </div>
-            </div>
-            <div className="calendar-view" id="calendarView"></div>
-          </div>
-
-          {/* List of Tips */}
-          <div className="tip-list">
-            <h2 className="text-xl font-semibold text-white">
-              Tip History
-              <span className="text-sm text-gray-400 font-normal">
-                {tips.length} {tips.length === 1 ? 'entry' : 'entries'}
-              </span>
-            </h2>
-            {tips.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                No tips recorded yet. Add your first tip to see it here.
+              
+              <div id="calendarView" className="grid grid-cols-7 gap-2 text-center">
+                {/* Calendar will be rendered here by renderCalendar() */}
               </div>
-            ) : (
-              <ul>
-                {tips
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .map((tip, index) => (
-                    <li key={`${tip.date}-${index}`}>
-                      <span className="date">
-                        {new Date(tip.date).toLocaleDateString('en-US', { 
-                          weekday: 'short', 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
-                      </span>
-                      <span className="amount">${tip.amount.toFixed(2)}</span>
-                      <span className="actions">
-                        <button 
-                          className="edit-btn"
-                          onClick={() => editTip(index)}
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          className="delete-btn"
-                          onClick={() => deleteTip(index)}
-                        >
-                          Delete
-                        </button>
-                      </span>
-                    </li>
-                  ))}
-              </ul>
-            )}
             </div>
           </div>
-        </main>
+          
+          {/* Add Tip Section */}
+          <div className="add-tip-section mb-8">
+            <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
+              <h3 className="text-xl font-bold mb-4">Add New Tip</h3>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <label className="block text-gray-400 mb-2">Date</label>
+                  <input 
+                    type="date" 
+                    value={tipDate}
+                    onChange={(e) => setTipDate(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-gray-400 mb-2">Amount ($)</label>
+                  <input 
+                    type="number" 
+                    id="tipAmount"
+                    value={tipAmount}
+                    onChange={(e) => setTipAmount(e.target.value)}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button 
+                    onClick={addTip}
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold py-2 px-6 rounded-lg hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg disabled:opacity-50"
+                  >
+                    {isLoading ? 'Saving...' : 'Add Tip'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Recent Tips Section */}
+          <div className="recent-tips-section">
+            <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
+              <h3 className="text-xl font-bold mb-4">Recent Tips</h3>
+              {tips.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-800">
+                        <th className="text-left py-2 px-4 text-gray-400">Date</th>
+                        <th className="text-right py-2 px-4 text-gray-400">Amount</th>
+                        <th className="text-right py-2 px-4 text-gray-400">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...tips]
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .slice(0, 5)
+                        .map((tip, index) => (
+                          <tr key={`${tip.date}-${index}`} className="border-b border-gray-800">
+                            <td className="py-2 px-4">{new Date(tip.date).toLocaleDateString()}</td>
+                            <td className="py-2 px-4 text-right">${tip.amount.toFixed(2)}</td>
+                            <td className="py-2 px-4 text-right">
+                              <button 
+                                onClick={() => editTip(tips.findIndex(t => t.date === tip.date))}
+                                className="text-cyan-500 hover:text-cyan-400 mr-2"
+                                disabled={isLoading}
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => deleteTip(tips.findIndex(t => t.date === tip.date))}
+                                className="text-red-500 hover:text-red-400"
+                                disabled={isLoading}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-400 text-center py-4">No tips recorded yet. Add your first tip above!</p>
+              )}
+              {tips.length > 5 && (
+                <div className="mt-4 text-center">
+                  <button 
+                    onClick={() => router.push('/history')}
+                    className="text-cyan-500 hover:text-cyan-400"
+                  >
+                    View All Tips
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
+      
+      <style jsx>{`
+        .calendar-day {
+          aspect-ratio: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          border-radius: 0.5rem;
+          background-color: rgba(31, 41, 55, 0.5);
+          position: relative;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .calendar-day:hover {
+          background-color: rgba(31, 41, 55, 0.8);
+        }
+        
+        .calendar-day.empty {
+          background-color: transparent;
+          cursor: default;
+        }
+        
+        .calendar-day.today {
+          border: 2px solid #06b6d4;
+        }
+        
+        .calendar-day.has-tip {
+          background-color: rgba(6, 182, 212, 0.2);
+        }
+        
+        .tip-text {
+          font-size: 0.75rem;
+          color: #06b6d4;
+          margin-top: 0.25rem;
+        }
+      `}</style>
+    </div>
   );
 } 
