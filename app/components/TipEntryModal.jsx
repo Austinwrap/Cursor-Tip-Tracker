@@ -14,15 +14,18 @@ import {
   FormLabel,
   Input,
   useToast,
-  VStack
+  VStack,
+  Text,
+  Box
 } from '@chakra-ui/react';
 
 export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSaved }) {
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('');
   const toast = useToast();
 
-  // Super simple submit handler - just save the number!
+  // ULTRA simple submit handler - just save the number!
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -39,15 +42,26 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
     }
     
     setIsLoading(true);
+    setDebugInfo('Saving tip...');
     
     try {
-      console.log('Submitting tip:', { amount, date, userId });
+      // Log all the information for debugging
+      const debugData = { 
+        userId, 
+        date: date?.toISOString?.() || date, 
+        formattedDate: date?.toISOString?.().split('T')[0] || date,
+        amount, 
+        numericAmount: Number(amount)
+      };
+      console.log('Submitting tip with data:', debugData);
+      setDebugInfo(`Submitting: ${JSON.stringify(debugData)}`);
       
       // Call the simplified addTip function
-      const { error } = await addTip(userId, date, amount);
+      const { data, error } = await addTip(userId, date, amount);
       
       if (error) {
         console.error('Error saving tip:', error);
+        setDebugInfo(`Error: ${JSON.stringify(error)}`);
         toast({
           title: 'Error saving tip',
           description: error.message || 'Please try again',
@@ -57,9 +71,11 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
         });
       } else {
         // Success!
+        console.log('Tip saved successfully:', data);
+        setDebugInfo(`Success: ${JSON.stringify(data)}`);
         toast({
           title: 'Tip saved!',
-          description: `$${amount} has been saved for ${date.toLocaleDateString()}`,
+          description: `$${amount} has been saved for ${date?.toLocaleDateString?.() || date}`,
           status: 'success',
           duration: 3000,
           isClosable: true,
@@ -72,6 +88,7 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
       }
     } catch (err) {
       console.error('Unexpected error:', err);
+      setDebugInfo(`Exception: ${err.message}`);
       toast({
         title: 'Unexpected error',
         description: err.message || 'Please try again',
@@ -88,7 +105,7 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Add Tip for {date?.toLocaleDateString()}</ModalHeader>
+        <ModalHeader>Add Tip for {date?.toLocaleDateString?.() || date}</ModalHeader>
         <ModalCloseButton />
         <ModalBody pb={6}>
           <form onSubmit={handleSubmit}>
@@ -104,6 +121,19 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
                   step="0.01"
                 />
               </FormControl>
+              
+              {debugInfo && (
+                <Box 
+                  p={2} 
+                  bg="gray.100" 
+                  borderRadius="md" 
+                  fontSize="xs" 
+                  fontFamily="monospace"
+                  overflowX="auto"
+                >
+                  <Text>{debugInfo}</Text>
+                </Box>
+              )}
               
               <Button 
                 colorScheme="blue" 
