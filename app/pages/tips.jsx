@@ -210,6 +210,10 @@ export default function TipsPage() {
                 const dateStr = \`\${year}-\${String(month + 1).padStart(2, '0')}-\${String(day).padStart(2, '0')}\`;
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'calendar-day';
+                dayDiv.onclick = function() {
+                    document.getElementById('tipDate').value = dateStr;
+                    document.getElementById('tipAmount').focus();
+                };
                 const dayNum = document.createElement('span');
                 dayNum.textContent = day;
                 dayDiv.appendChild(dayNum);
