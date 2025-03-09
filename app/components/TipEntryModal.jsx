@@ -1,118 +1,123 @@
 'use client';
 
 import { useState } from 'react';
-import styles from './TipEntryModal.module.css';
 import { addTip } from '../lib/supabaseClient';
+import { 
+  Modal, 
+  ModalOverlay, 
+  ModalContent, 
+  ModalHeader, 
+  ModalBody, 
+  ModalCloseButton,
+  Button,
+  FormControl,
+  FormLabel,
+  Input,
+  useToast,
+  VStack
+} from '@chakra-ui/react';
 
 export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSaved }) {
   const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
-  if (!isOpen) return null;
-  
-  const formattedDate = date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
+  const toast = useToast();
+
+  // Super simple submit handler - just save the number!
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      setError('Please enter a valid tip amount');
+    // Basic validation
+    if (!amount || isNaN(Number(amount))) {
+      toast({
+        title: 'Invalid amount',
+        description: 'Please enter a valid number',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
       return;
     }
     
     setIsLoading(true);
-    setError('');
-    setSuccess('');
     
     try {
-      // Use the simplified addTip function
-      const { error: saveError } = await addTip(userId, date, amount, note);
+      console.log('Submitting tip:', { amount, date, userId });
       
-      if (saveError) throw new Error(saveError.message);
+      // Call the simplified addTip function
+      const { error } = await addTip(userId, date, amount);
       
-      setSuccess('Tip saved successfully!');
-      
-      // Clear form
-      setAmount('');
-      setNote('');
-      
-      // Wait a moment to show success message before closing
-      setTimeout(() => {
+      if (error) {
+        console.error('Error saving tip:', error);
+        toast({
+          title: 'Error saving tip',
+          description: error.message || 'Please try again',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      } else {
+        // Success!
+        toast({
+          title: 'Tip saved!',
+          description: `$${amount} has been saved for ${date.toLocaleDateString()}`,
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        
+        // Reset form and close
+        setAmount('');
         onTipSaved();
         onClose();
-      }, 1000);
-      
+      }
     } catch (err) {
-      console.error('Error saving tip:', err);
-      setError(`Failed to save tip: ${err.message}`);
+      console.error('Unexpected error:', err);
+      toast({
+        title: 'Unexpected error',
+        description: err.message || 'Please try again',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-        <h2 className={styles.modalTitle}>Add Tip for {formattedDate}</h2>
-        
-        {error && <div className={styles.errorMessage}>{error}</div>}
-        {success && <div className={styles.successMessage}>{success}</div>}
-        
-        <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}>
-            <label htmlFor="amount" className={styles.label}>Tip Amount ($)</label>
-            <input
-              type="number"
-              id="amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Enter tip amount"
-              className={styles.input}
-              step="1"
-              min="0"
-              required
-              autoFocus
-            />
-          </div>
-          
-          <div className={styles.formGroup}>
-            <label htmlFor="note" className={styles.label}>Note (optional)</label>
-            <textarea
-              id="note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Add a note about this tip"
-              className={styles.textarea}
-            />
-          </div>
-          
-          <div className={styles.buttonGroup}>
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className={styles.cancelButton}
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className={styles.saveButton}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Saving...' : 'Save Tip'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Add Tip for {date?.toLocaleDateString()}</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody pb={6}>
+          <form onSubmit={handleSubmit}>
+            <VStack spacing={4} align="stretch">
+              <FormControl isRequired>
+                <FormLabel>Amount ($)</FormLabel>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Enter tip amount"
+                  min="0"
+                  step="0.01"
+                />
+              </FormControl>
+              
+              <Button 
+                colorScheme="blue" 
+                type="submit" 
+                isLoading={isLoading}
+                width="100%"
+                mt={4}
+              >
+                Save Tip
+              </Button>
+            </VStack>
+          </form>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
   );
 } 

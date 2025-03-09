@@ -1,47 +1,41 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase, getUserTips, isBrowser } from '../lib/supabaseClient';
-import Calendar from '../components/Calendar';
+import { useRouter } from 'next/router';
+import { useUser } from '@supabase/auth-helpers-react';
+import { getUserTips, isBrowser } from '../lib/supabaseClient';
+import Calendar from 'react-calendar';
 import TipEntryModal from '../components/TipEntryModal';
-import styles from '../styles/Tips.module.css';
+import { 
+  Box, 
+  Container, 
+  Heading, 
+  Text, 
+  Button, 
+  useToast,
+  VStack,
+  HStack,
+  Spinner,
+  Center
+} from '@chakra-ui/react';
+import 'react-calendar/dist/Calendar.css';
 
 export default function TipsPage() {
-  const [user, setUser] = useState(null);
+  const user = useUser();
+  const router = useRouter();
+  const toast = useToast();
+  
   const [tips, setTips] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Check for authenticated user
+  // Check if user is logged in
   useEffect(() => {
-    // This needs to run only on the client side
-    if (isBrowser()) {
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        (event, session) => {
-          setUser(session?.user || null);
-        }
-      );
-      
-      // Get initial auth state
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setUser(session?.user || null);
-      });
-      
-      return () => {
-        authListener?.subscription.unsubscribe();
-      };
-    }
-  }, []);
-  
-  // Load tips when user changes
-  useEffect(() => {
-    if (user) {
+    if (isBrowser() && !user) {
+      router.push('/login');
+    } else if (user) {
       loadTips();
-    } else {
-      setTips([]);
-      setIsLoading(false);
     }
   }, [user]);
   
@@ -50,18 +44,33 @@ export default function TipsPage() {
     if (!user) return;
     
     setIsLoading(true);
-    setError('');
     
     try {
-      // Use the simplified getUserTips function
-      const { data, error: fetchError } = await getUserTips(user.id);
+      console.log('Loading tips for user:', user.id);
+      const { data, error } = await getUserTips(user.id);
       
-      if (fetchError) throw new Error(fetchError.message);
-      
-      setTips(data || []);
+      if (error) {
+        console.error('Error loading tips:', error);
+        toast({
+          title: 'Error loading tips',
+          description: error.message || 'Please try again',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      } else {
+        console.log('Tips loaded:', data);
+        setTips(data || []);
+      }
     } catch (err) {
-      console.error('Error loading tips:', err);
-      setError('Failed to load your tips. Please try again.');
+      console.error('Unexpected error loading tips:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to load your tips. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -80,36 +89,90 @@ export default function TipsPage() {
   
   // Handle tip saved
   const handleTipSaved = () => {
-    loadTips();
+    loadTips(); // Reload tips after saving
   };
+  
+  // Function to get tip amount for a specific date
+  const getTipForDate = (date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const tip = tips.find(t => t.date === dateStr);
+    return tip ? tip.amount : null;
+  };
+  
+  // Custom tile content for calendar
+  const tileContent = ({ date, view }) => {
+    if (view !== 'month') return null;
+    
+    const amount = getTipForDate(date);
+    if (!amount) return null;
+    
+    return (
+      <div style={{ 
+        fontSize: '0.8em', 
+        padding: '2px', 
+        backgroundColor: '#e6f7ff', 
+        borderRadius: '4px',
+        marginTop: '2px'
+      }}>
+        ${amount}
+      </div>
+    );
+  };
+  
+  if (!isBrowser()) {
+    return null; // Don't render during SSR
+  }
   
   if (!user) {
     return (
-      <div className={styles.container}>
-        <h1 className={styles.title}>Tips Tracker</h1>
-        <div className={styles.loginMessage}>
-          <p>Please log in to track your tips</p>
-        </div>
-      </div>
+      <Center h="100vh">
+        <Spinner />
+      </Center>
     );
   }
   
   return (
-    <div className={styles.container}>
-      <h1 className={styles.title}>Tips Tracker</h1>
+    <Container maxW="container.md" py={8}>
+      <VStack spacing={6} align="stretch">
+        <Heading as="h1" size="xl" textAlign="center">
+          Tip Tracker
+        </Heading>
+        
+        <Text textAlign="center" fontSize="lg">
+          Track your tips by clicking on a day in the calendar
+        </Text>
+        
+        {isLoading ? (
+          <Center p={10}>
+            <Spinner size="xl" />
+          </Center>
+        ) : (
+          <Box 
+            borderWidth="1px" 
+            borderRadius="lg" 
+            p={4} 
+            boxShadow="md"
+            bg="white"
+          >
+            <Calendar 
+              onClickDay={handleDayClick}
+              tileContent={tileContent}
+              className="react-calendar"
+            />
+          </Box>
+        )}
+        
+        <HStack justify="center">
+          <Button 
+            colorScheme="blue" 
+            onClick={() => handleDayClick(new Date())}
+          >
+            Add Today's Tip
+          </Button>
+        </HStack>
+      </VStack>
       
-      {error && <div className={styles.errorMessage}>{error}</div>}
-      
-      {isLoading ? (
-        <div className={styles.loading}>Loading your tips...</div>
-      ) : (
-        <Calendar 
-          tips={tips} 
-          onDayClick={handleDayClick} 
-        />
-      )}
-      
-      {isModalOpen && (
+      {isModalOpen && selectedDate && (
         <TipEntryModal
           isOpen={isModalOpen}
           onClose={handleCloseModal}
@@ -118,6 +181,6 @@ export default function TipsPage() {
           onTipSaved={handleTipSaved}
         />
       )}
-    </div>
+    </Container>
   );
 } 
