@@ -29,29 +29,61 @@ export async function POST(request: Request) {
       if (process.env.NODE_ENV === 'development') {
         console.log('Using development mode: Enabling premium without payment');
         
-        // Update the user's is_paid status in the database
-        const { error } = await supabase
-          .from('users')
-          .update({ 
-            is_paid: true,
-            subscription_type: plan 
-          })
-          .eq('id', userId);
+        try {
+          // Update the user's is_paid status in the database
+          const { error } = await supabase
+            .from('users')
+            .update({ 
+              is_paid: true,
+              subscription_type: plan,
+              plan_type: plan === 'monthly' ? 'starter' : plan === 'annual' ? 'pro' : 'ultimate',
+              premium_features_enabled: true,
+              subscription_status: plan === 'lifetime' ? 'lifetime' : 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (error) {
+            console.error('Error updating user subscription status:', error);
+            return NextResponse.json(
+              { error: 'Failed to update subscription status' },
+              { status: 500 }
+            );
+          }
           
-        if (error) {
-          console.error('Error updating user subscription status:', error);
+          // Also record the purchase in the purchases table if it exists
+          try {
+            await supabase
+              .from('purchases')
+              .insert([{
+                user_id: userId,
+                plan_type: plan === 'monthly' ? 'starter' : plan === 'annual' ? 'pro' : 'ultimate',
+                subscription_type: plan,
+                amount: plan === 'monthly' ? 6 : plan === 'annual' ? 30 : 99,
+                currency: 'USD',
+                payment_processor: 'development',
+                payment_id: `dev_${Date.now()}`,
+                purchase_date: new Date().toISOString(),
+                metadata: { development_mode: true }
+              }]);
+          } catch (purchaseError) {
+            // Don't fail if purchases table doesn't exist
+            console.warn('Could not record purchase in development mode:', purchaseError);
+          }
+          
+          // Redirect to dashboard with success message
+          return NextResponse.json({ 
+            success: true,
+            dev: true,
+            url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?success=true&dev=true&plan=${plan}`
+          });
+        } catch (devModeError) {
+          console.error('Error in development mode:', devModeError);
           return NextResponse.json(
-            { error: 'Failed to update subscription status' },
+            { error: 'Error in development mode', details: devModeError.message },
             { status: 500 }
           );
         }
-        
-        // Redirect to dashboard with success message
-        return NextResponse.json({ 
-          success: true,
-          dev: true,
-          url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?success=true&dev=true`
-        });
       }
       
       return NextResponse.json(

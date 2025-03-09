@@ -70,14 +70,25 @@ export const updateUserPaidStatus = async (userId: string, isPaid: boolean): Pro
 };
 
 // Tip functions
-export const addTip = async (userId: string, date: string, amount: number): Promise<boolean> => {
+export const saveTipToSupabase = async (userId: string, date: string, amount: number): Promise<boolean> => {
   try {
+    console.log('Saving tip to Supabase:', { userId, date, amount });
+    
+    // Validate inputs
+    if (!userId || !date || isNaN(amount)) {
+      console.error('Invalid tip data:', { userId, date, amount });
+      return false;
+    }
+    
+    // Format date to ensure consistency (YYYY-MM-DD)
+    const formattedDate = new Date(date).toISOString().split('T')[0];
+    
     // First check if a tip already exists for this date
     const { data: existingTip, error: fetchError } = await supabase
       .from('tips')
       .select('*')
       .eq('user_id', userId)
-      .eq('date', date)
+      .eq('date', formattedDate)
       .maybeSingle();
     
     if (fetchError) {
@@ -88,19 +99,26 @@ export const addTip = async (userId: string, date: string, amount: number): Prom
     let result;
     
     if (existingTip) {
+      console.log('Updating existing tip:', existingTip.id);
       // Update existing tip
       result = await supabase
         .from('tips')
-        .update({ amount })
+        .update({ 
+          amount,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', existingTip.id);
     } else {
+      console.log('Inserting new tip');
       // Insert new tip
       result = await supabase
         .from('tips')
         .insert([{ 
           user_id: userId, 
-          date, 
-          amount 
+          date: formattedDate, 
+          amount,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }]);
     }
     
@@ -109,12 +127,16 @@ export const addTip = async (userId: string, date: string, amount: number): Prom
       return false;
     }
     
+    console.log('Tip saved successfully');
     return true;
   } catch (err) {
-    console.error('Unexpected error in addTip:', err);
+    console.error('Unexpected error in saveTipToSupabase:', err);
     return false;
   }
 };
+
+// Keep the original addTip function for backward compatibility
+export const addTip = saveTipToSupabase;
 
 export const getTips = async (userId: string): Promise<Tip[]> => {
   try {
