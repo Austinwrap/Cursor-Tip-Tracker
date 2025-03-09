@@ -15,6 +15,7 @@ const routes = [
   'analytics',
   'upgrade',
   'tips',
+  'premium-dashboard',
   '200', // For default Netlify handling
 ];
 

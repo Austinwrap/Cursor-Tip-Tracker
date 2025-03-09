@@ -114,6 +114,18 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/premium-dashboard"
+  to = "/premium-dashboard.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/premium-dashboard/*"
+  to = "/premium-dashboard.html"
+  status = 200
+  force = true
+
 # For all other routes, serve the corresponding HTML file first
 [[redirects]]
   from = "/*"
