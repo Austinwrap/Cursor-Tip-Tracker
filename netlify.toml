@@ -17,7 +17,68 @@
 # [[plugins]]
 #  package = "@netlify/plugin-nextjs"
 
-# For all routes, serve the corresponding HTML file first
+# Specific redirects for each route to ensure they work consistently
+[[redirects]]
+  from = "/dashboard"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/dashboard/*"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/signin"
+  to = "/signin.html"
+  status = 200
+
+[[redirects]]
+  from = "/signin/*"
+  to = "/signin.html"
+  status = 200
+
+[[redirects]]
+  from = "/signup"
+  to = "/signup.html"
+  status = 200
+
+[[redirects]]
+  from = "/signup/*"
+  to = "/signup.html"
+  status = 200
+
+[[redirects]]
+  from = "/history"
+  to = "/history.html"
+  status = 200
+
+[[redirects]]
+  from = "/history/*"
+  to = "/history.html"
+  status = 200
+
+[[redirects]]
+  from = "/analytics"
+  to = "/analytics.html"
+  status = 200
+
+[[redirects]]
+  from = "/analytics/*"
+  to = "/analytics.html"
+  status = 200
+
+[[redirects]]
+  from = "/upgrade"
+  to = "/upgrade.html"
+  status = 200
+
+[[redirects]]
+  from = "/upgrade/*"
+  to = "/upgrade.html"
+  status = 200
+
+# For all other routes, serve the corresponding HTML file first
 [[redirects]]
   from = "/*"
   to = "/:splat.html"

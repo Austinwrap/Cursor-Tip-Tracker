@@ -17,8 +17,12 @@ const routes = [
   'upgrade',
   'signin',
   'signup',
-  'tips'
+  'tips',
+  'premium-dashboard'
 ];
+
+console.log('Starting HTML file generation for Netlify deployment...');
+console.log(`Output directory: ${outDir}`);
 
 // Check if the out directory exists
 if (!fs.existsSync(outDir)) {
@@ -33,16 +37,25 @@ if (!fs.existsSync(notFoundPath)) {
   process.exit(1);
 }
 
-// Read the 404.html file content
-const notFoundContent = fs.readFileSync(notFoundPath, 'utf8');
+// Check if index.html exists
+const indexPath = path.join(outDir, 'index.html');
+if (!fs.existsSync(indexPath)) {
+  console.error('Warning: index.html file not found in the "out" directory. Using 404.html as template.');
+} else {
+  console.log('Found index.html, will use it as template for route HTML files.');
+}
 
-// Copy 404.html to each route HTML file
+// Use index.html as template if it exists, otherwise use 404.html
+const templatePath = fs.existsSync(indexPath) ? indexPath : notFoundPath;
+const templateContent = fs.readFileSync(templatePath, 'utf8');
+
+// Copy template to each route HTML file
 let successCount = 0;
 for (const route of routes) {
   const routeHtmlPath = path.join(outDir, `${route}.html`);
   
   try {
-    fs.writeFileSync(routeHtmlPath, notFoundContent);
+    fs.writeFileSync(routeHtmlPath, templateContent);
     console.log(`✅ Created ${route}.html`);
     successCount++;
   } catch (error) {
@@ -50,4 +63,14 @@ for (const route of routes) {
   }
 }
 
-console.log(`\n🎉 Successfully created ${successCount} of ${routes.length} HTML files.`); 
+// Also ensure we have a 200.html file for Netlify's default success page
+try {
+  fs.writeFileSync(path.join(outDir, '200.html'), templateContent);
+  console.log('✅ Created 200.html');
+  successCount++;
+} catch (error) {
+  console.error('❌ Error creating 200.html:', error.message);
+}
+
+console.log(`\n🎉 Successfully created ${successCount} of ${routes.length + 1} HTML files.`);
+console.log('HTML file generation complete!'); 

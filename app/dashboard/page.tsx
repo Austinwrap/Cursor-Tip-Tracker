@@ -1,9 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '../components/Header';
+import { useAuth } from '../lib/AuthContext';
 
 export default function Dashboard() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [tips, setTips] = useState<Array<{date: string, amount: number}>>([]);
   const [weeklyTotal, setWeeklyTotal] = useState('0.00');
   const [monthlyTotal, setMonthlyTotal] = useState('0.00');
@@ -12,12 +16,20 @@ export default function Dashboard() {
   const [tipDate, setTipDate] = useState<string>('');
   const [tipAmount, setTipAmount] = useState<string>('');
 
+  // Redirect to signin if not authenticated
   useEffect(() => {
-    // Only run in browser
-    if (typeof window === 'undefined') return;
+    if (!loading && !user) {
+      router.push('/signin');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    // Only run in browser and if user is authenticated
+    if (typeof window === 'undefined' || !user) return;
     
-    // Load tips from localStorage
-    const storedTips = localStorage.getItem('tips');
+    // Load tips from localStorage with user-specific key
+    const storageKey = `tips_${user.id}`;
+    const storedTips = localStorage.getItem(storageKey);
     if (storedTips) {
       setTips(JSON.parse(storedTips));
     }
@@ -28,16 +40,22 @@ export default function Dashboard() {
 
     // Initialize
     updateTotals();
-  }, []);
+  }, [user]);
 
   // Update totals whenever tips change
   useEffect(() => {
+    if (!user) return;
     renderCalendar();
     updateTotals();
-  }, [tips, selectedMonth]);
+  }, [tips, selectedMonth, user]);
 
   // Add tip function
   const addTip = () => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
     const date = tipDate;
     const amount = parseFloat(tipAmount);
 
@@ -48,7 +66,10 @@ export default function Dashboard() {
 
     const newTips = [...tips, { date, amount }];
     setTips(newTips);
-    localStorage.setItem('tips', JSON.stringify(newTips));
+    
+    // Save with user-specific key
+    const storageKey = `tips_${user.id}`;
+    localStorage.setItem(storageKey, JSON.stringify(newTips));
     
     // Clear input
     setTipAmount('');
@@ -56,22 +77,38 @@ export default function Dashboard() {
 
   // Edit tip function
   const editTip = (index: number) => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
     const newAmount = prompt('Enter new tip amount:', tips[index].amount.toString());
     if (newAmount && !isNaN(parseFloat(newAmount))) {
       const newTips = [...tips];
       newTips[index].amount = parseFloat(newAmount);
       setTips(newTips);
-      localStorage.setItem('tips', JSON.stringify(newTips));
+      
+      // Save with user-specific key
+      const storageKey = `tips_${user.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(newTips));
     }
   };
 
   // Delete tip function
   const deleteTip = (index: number) => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
     if (confirm('Are you sure you want to delete this tip?')) {
       const newTips = [...tips];
       newTips.splice(index, 1);
       setTips(newTips);
-      localStorage.setItem('tips', JSON.stringify(newTips));
+      
+      // Save with user-specific key
+      const storageKey = `tips_${user.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(newTips));
     }
   };
 
@@ -84,6 +121,8 @@ export default function Dashboard() {
 
   // Render calendar
   const renderCalendar = () => {
+    if (!user) return;
+    
     const calendarView = document.getElementById('calendarView');
     if (!calendarView) return;
     
@@ -149,6 +188,8 @@ export default function Dashboard() {
 
   // Update totals
   const updateTotals = () => {
+    if (!user) return;
+    
     const today = new Date();
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
@@ -171,6 +212,23 @@ export default function Dashboard() {
     setMonthlyTotal(monthlyTotalValue.toFixed(2));
     setYearlyTotal(yearlyTotalValue.toFixed(2));
   };
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <Header />
+        <div className="flex justify-center items-center h-screen">
+          <div className="animate-pulse text-xl">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, don't render the dashboard (will redirect to signin)
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
