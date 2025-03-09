@@ -1,3 +1,5 @@
+'use client';
+
 import styles from './PremiumTeaser.module.css';
 
 export default function PremiumTeaser() {
@@ -15,10 +17,10 @@ export default function PremiumTeaser() {
         </div>
         
         <div className={styles.feature}>
-          <div className={styles.featureIcon}>🔮</div>
+          <div className={styles.featureIcon}>📈</div>
           <div className={styles.featureContent}>
-            <h3>Smart Predictions</h3>
-            <p>Get personalized recommendations on when to work for maximum earnings</p>
+            <h3>Earnings Insights</h3>
+            <p>Discover your best earning days and optimize your schedule</p>
           </div>
         </div>
         
@@ -47,7 +49,7 @@ export default function PremiumTeaser() {
         <p className={styles.pricingNote}>That's just $2.50 per month!</p>
       </div>
       
-      <a href="/premium" className={styles.upgradeButton}>
+      <a href="/upgrade" className={styles.upgradeButton}>
         Upgrade Now
       </a>
     </div>

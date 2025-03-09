@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, getUserTips, isBrowser } from '../lib/supabaseClient';
 import Calendar from '../components/Calendar';
 import TipEntryModal from '../components/TipEntryModal';
 import styles from '../styles/Tips.module.css';
@@ -17,7 +17,7 @@ export default function TipsPage() {
   // Check for authenticated user
   useEffect(() => {
     // This needs to run only on the client side
-    if (typeof window !== 'undefined') {
+    if (isBrowser()) {
       const { data: authListener } = supabase.auth.onAuthStateChange(
         (event, session) => {
           setUser(session?.user || null);
@@ -53,12 +53,10 @@ export default function TipsPage() {
     setError('');
     
     try {
-      const { data, error } = await supabase
-        .from('tips')
-        .select('*')
-        .eq('user_id', user.id);
+      // Use the simplified getUserTips function
+      const { data, error: fetchError } = await getUserTips(user.id);
       
-      if (error) throw new Error(error.message);
+      if (fetchError) throw new Error(fetchError.message);
       
       setTips(data || []);
     } catch (err) {

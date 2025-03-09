@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import styles from './TipEntryModal.module.css';
-import { supabase } from '../lib/supabaseClient';
+import { addTip } from '../lib/supabaseClient';
 
 export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSaved }) {
   const [amount, setAmount] = useState('');
@@ -33,21 +33,11 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
     setSuccess('');
     
     try {
-      // Save tip to Supabase
-      const { data, error: saveError } = await supabase
-        .from('tips')
-        .insert({
-          user_id: userId,
-          date: date.toISOString().split('T')[0],
-          amount: Number(amount),
-          note: note || '',
-          type: 'cash'
-        })
-        .select();
+      // Use the simplified addTip function
+      const { error: saveError } = await addTip(userId, date, amount, note);
       
       if (saveError) throw new Error(saveError.message);
       
-      console.log('Tip saved successfully:', data);
       setSuccess('Tip saved successfully!');
       
       // Clear form
