@@ -6,71 +6,63 @@
 const fs = require('fs');
 const path = require('path');
 
-// Output directory where Next.js builds the static files
-const outDir = path.join(__dirname, '..', 'out');
-
-// List of routes that need HTML files
+// Define the routes that need HTML files
 const routes = [
   'dashboard',
+  'signin',
+  'signup',
   'history',
   'analytics',
   'upgrade',
-  'signin',
-  'signup',
   'tips',
-  'premium-dashboard'
+  '200', // For default Netlify handling
 ];
 
-console.log('Starting HTML file generation for Netlify deployment...');
-console.log(`Output directory: ${outDir}`);
+// Path to the output directory
+const outDir = path.join(__dirname, '../out');
 
-// Check if the out directory exists
+// Check if the output directory exists
 if (!fs.existsSync(outDir)) {
-  console.error('Error: The "out" directory does not exist. Make sure the Next.js build completed successfully.');
+  console.error('Error: The "out" directory does not exist. Please run the build first.');
   process.exit(1);
 }
 
-// Check if 404.html exists
-const notFoundPath = path.join(outDir, '404.html');
-if (!fs.existsSync(notFoundPath)) {
-  console.error('Error: 404.html file not found in the "out" directory.');
-  process.exit(1);
-}
-
-// Check if index.html exists
+// Path to the source index.html file
 const indexPath = path.join(outDir, 'index.html');
+
+// Check if the index.html file exists
 if (!fs.existsSync(indexPath)) {
-  console.error('Warning: index.html file not found in the "out" directory. Using 404.html as template.');
-} else {
-  console.log('Found index.html, will use it as template for route HTML files.');
+  console.error('Error: The index.html file does not exist in the "out" directory.');
+  process.exit(1);
 }
 
-// Use index.html as template if it exists, otherwise use 404.html
-const templatePath = fs.existsSync(indexPath) ? indexPath : notFoundPath;
-const templateContent = fs.readFileSync(templatePath, 'utf8');
+// Read the content of the index.html file
+const indexContent = fs.readFileSync(indexPath, 'utf8');
 
-// Copy template to each route HTML file
+// Create HTML files for each route
 let successCount = 0;
-for (const route of routes) {
-  const routeHtmlPath = path.join(outDir, `${route}.html`);
+let errorCount = 0;
+
+console.log('Creating HTML files for routes...');
+
+routes.forEach(route => {
+  const routePath = path.join(outDir, `${route}.html`);
   
   try {
-    fs.writeFileSync(routeHtmlPath, templateContent);
+    // Copy the index.html content to the route HTML file
+    fs.writeFileSync(routePath, indexContent);
     console.log(`✅ Created ${route}.html`);
     successCount++;
   } catch (error) {
     console.error(`❌ Error creating ${route}.html:`, error.message);
+    errorCount++;
   }
-}
+});
 
-// Also ensure we have a 200.html file for Netlify's default success page
-try {
-  fs.writeFileSync(path.join(outDir, '200.html'), templateContent);
-  console.log('✅ Created 200.html');
-  successCount++;
-} catch (error) {
-  console.error('❌ Error creating 200.html:', error.message);
-}
+console.log(`\nSummary: Created ${successCount} HTML files, encountered ${errorCount} errors.`);
 
-console.log(`\n🎉 Successfully created ${successCount} of ${routes.length + 1} HTML files.`);
-console.log('HTML file generation complete!'); 
+if (successCount === routes.length) {
+  console.log('All HTML files were created successfully! 🎉');
+} else {
+  console.log('Some HTML files could not be created. Please check the errors above.');
+} 

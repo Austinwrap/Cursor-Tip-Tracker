@@ -47,6 +47,10 @@ export default function Upgrade() {
         // Handle specific error cases
         if (errorData.details && errorData.details.includes('The string did not match the expected pattern')) {
           throw new Error('Stripe configuration error: The API keys are not properly set up. Please contact support.');
+        } else if (errorData.error && errorData.error.includes('Invalid API Key')) {
+          throw new Error('Stripe API key is invalid. Please contact support.');
+        } else if (errorData.error && errorData.error.includes('price_id')) {
+          throw new Error('Stripe price configuration is missing. Please contact support.');
         } else {
           throw new Error(errorData.error || 'Failed to create checkout session');
         }
@@ -111,6 +115,9 @@ export default function Upgrade() {
             <div className="max-w-md mx-auto mb-8 bg-red-900/50 border-l-4 border-red-500 text-white p-4 rounded-md">
               <p className="font-bold">Error</p>
               <p>{error}</p>
+              {error.includes('configuration') && (
+                <p className="mt-2 text-sm">The administrator has been notified. Please try again later.</p>
+              )}
             </div>
           )}
           
