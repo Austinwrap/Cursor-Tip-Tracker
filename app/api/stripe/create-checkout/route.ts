@@ -6,10 +6,8 @@ import { supabase } from '@/app/lib/supabase';
 let stripe: Stripe | null = null;
 try {
   if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('placeholder')) {
-    // Initialize with API version to ensure compatibility
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16', // Use a stable API version
-    });
+    // Initialize without specifying API version to use the default
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     console.log('Stripe initialized successfully');
   } else {
     console.warn('Stripe secret key not found or is a placeholder. Using development mode.');
