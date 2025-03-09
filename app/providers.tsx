@@ -1,7 +1,6 @@
 'use client';
 
-import { ChakraProvider } from '@chakra-ui/react';
-import { extendTheme } from '@chakra-ui/theme-utils';
+import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import { ReactNode } from 'react';
 
 // Define the theme
