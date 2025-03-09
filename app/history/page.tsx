@@ -23,16 +23,18 @@ export default function History() {
 
   // Load tips from localStorage
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !user) return;
     
-    const storedTips = localStorage.getItem('tips');
+    // Use user-specific key
+    const storageKey = `tips_${user.id}`;
+    const storedTips = localStorage.getItem(storageKey);
     if (storedTips) {
       const parsedTips = JSON.parse(storedTips);
       setTips(parsedTips);
       setFilteredTips(parsedTips);
       calculateTotal(parsedTips);
     }
-  }, []);
+  }, [user]);
 
   // Apply filters when filter type changes
   useEffect(() => {
@@ -54,15 +56,33 @@ export default function History() {
       const today = new Date();
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
-      filtered = filtered.filter(tip => new Date(tip.date) >= weekStart);
+      weekStart.setHours(0, 0, 0, 0);
+      
+      filtered = filtered.filter(tip => {
+        const tipDate = new Date(tip.date);
+        tipDate.setHours(0, 0, 0, 0);
+        return tipDate >= weekStart;
+      });
     } else if (filterType === 'month') {
       const today = new Date();
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      filtered = filtered.filter(tip => new Date(tip.date) >= monthStart);
+      monthStart.setHours(0, 0, 0, 0);
+      
+      filtered = filtered.filter(tip => {
+        const tipDate = new Date(tip.date);
+        tipDate.setHours(0, 0, 0, 0);
+        return tipDate >= monthStart;
+      });
     } else if (filterType === 'year') {
       const today = new Date();
       const yearStart = new Date(today.getFullYear(), 0, 1);
-      filtered = filtered.filter(tip => new Date(tip.date) >= yearStart);
+      yearStart.setHours(0, 0, 0, 0);
+      
+      filtered = filtered.filter(tip => {
+        const tipDate = new Date(tip.date);
+        tipDate.setHours(0, 0, 0, 0);
+        return tipDate >= yearStart;
+      });
     }
     
     // Apply sort

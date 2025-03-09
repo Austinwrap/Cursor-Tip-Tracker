@@ -191,21 +191,45 @@ export default function Dashboard() {
     if (!user) return;
     
     const today = new Date();
+    
+    // Calculate week start (Sunday)
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    
+    // Calculate month start (1st day of current month)
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    monthStart.setHours(0, 0, 0, 0);
+    
+    // Calculate year start (January 1st of current year)
     const yearStart = new Date(today.getFullYear(), 0, 1);
+    yearStart.setHours(0, 0, 0, 0);
 
+    // Calculate weekly total - tips from this week
     const weeklyTotalValue = tips
-      .filter(tip => new Date(tip.date) >= weekStart)
+      .filter(tip => {
+        const tipDate = new Date(tip.date);
+        tipDate.setHours(0, 0, 0, 0);
+        return tipDate >= weekStart;
+      })
       .reduce((sum, tip) => sum + tip.amount, 0);
     
+    // Calculate monthly total - tips from this month
     const monthlyTotalValue = tips
-      .filter(tip => new Date(tip.date) >= monthStart)
+      .filter(tip => {
+        const tipDate = new Date(tip.date);
+        tipDate.setHours(0, 0, 0, 0);
+        return tipDate >= monthStart;
+      })
       .reduce((sum, tip) => sum + tip.amount, 0);
       
+    // Calculate yearly total - tips from this year
     const yearlyTotalValue = tips
-      .filter(tip => new Date(tip.date) >= yearStart)
+      .filter(tip => {
+        const tipDate = new Date(tip.date);
+        tipDate.setHours(0, 0, 0, 0);
+        return tipDate >= yearStart;
+      })
       .reduce((sum, tip) => sum + tip.amount, 0);
 
     setWeeklyTotal(weeklyTotalValue.toFixed(2));
