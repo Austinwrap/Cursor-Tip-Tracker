@@ -113,9 +113,35 @@ export default function TipsPage() {
             margin-top: 0;
             color: #aaffaa;
         }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 1000;
+        }
+        .notification.success {
+            background-color: #4CAF50;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        .notification.error {
+            background-color: #f44336;
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
+    <div id="notification" class="notification"></div>
     <div class="container">
         <!-- Input Section -->
         <div class="input-section">
@@ -138,37 +164,83 @@ export default function TipsPage() {
     </div>
 
     <script>
-        let tips = JSON.parse(localStorage.getItem('tips')) || [];
-
+        let tips = [];
+        
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
+            // Load tips from localStorage
+            try {
+                const savedTips = localStorage.getItem('tips');
+                if (savedTips) {
+                    tips = JSON.parse(savedTips);
+                }
+            } catch (error) {
+                console.error('Error loading tips:', error);
+                showNotification('Error loading saved tips. Starting fresh.', 'error');
+                // Reset tips if there's an error
+                tips = [];
+                localStorage.setItem('tips', JSON.stringify(tips));
+            }
+            
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('tipDate').value = today;
             renderTips();
             renderCalendar();
         });
 
-        function addTip() {
-            const date = document.getElementById('tipDate').value;
-            const amount = parseFloat(document.getElementById('tipAmount').value);
-
-            if (!date || isNaN(amount)) {
-                alert('Please enter a valid date and tip amount.');
-                return;
-            }
-
-            const tip = { date, amount };
-            tips.push(tip);
-            localStorage.setItem('tips', JSON.stringify(tips));
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification ' + type;
             
-            renderTips();
-            renderCalendar();
-            document.getElementById('tipAmount').value = ''; // Clear input
+            // Add show class to trigger animation
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function addTip() {
+            try {
+                const date = document.getElementById('tipDate').value;
+                const amount = parseFloat(document.getElementById('tipAmount').value);
+
+                if (!date || isNaN(amount)) {
+                    showNotification('Please enter a valid date and tip amount.', 'error');
+                    return;
+                }
+
+                const tip = { date, amount };
+                tips.push(tip);
+                localStorage.setItem('tips', JSON.stringify(tips));
+                
+                renderTips();
+                renderCalendar();
+                document.getElementById('tipAmount').value = ''; // Clear input
+                showNotification('Tip saved successfully!', 'success');
+            } catch (error) {
+                console.error('Error saving tip:', error);
+                showNotification('Failed to save tip. Please try again.', 'error');
+            }
         }
 
         function renderTips() {
             const tipList = document.getElementById('tipList');
             tipList.innerHTML = '';
+            
+            if (tips.length === 0) {
+                const emptyMessage = document.createElement('li');
+                emptyMessage.textContent = 'No tips recorded yet. Add your first tip above!';
+                emptyMessage.style.color = '#999';
+                emptyMessage.style.fontStyle = 'italic';
+                tipList.appendChild(emptyMessage);
+                return;
+            }
+            
             tips.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
             tips.forEach(tip => {
                 const li = document.createElement('li');
