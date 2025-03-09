@@ -12,6 +12,7 @@ export default function Upgrade() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'polar'>('stripe');
 
   const handleUpgradeClick = async (plan: 'monthly' | 'annual' | 'lifetime') => {
     if (!user) {
@@ -24,10 +25,14 @@ export default function Upgrade() {
     setMessage(null);
     
     try {
-      console.log('Starting upgrade process for plan:', plan);
+      console.log(`Starting upgrade process for plan: ${plan} using ${paymentMethod}`);
       
-      // Create checkout session
-      const response = await fetch('/api/stripe/create-checkout', {
+      // Create checkout session based on selected payment method
+      const endpoint = paymentMethod === 'stripe' 
+        ? '/api/stripe/create-checkout' 
+        : '/api/polar/create-checkout';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -46,11 +51,11 @@ export default function Upgrade() {
         
         // Handle specific error cases
         if (errorData.details && errorData.details.includes('The string did not match the expected pattern')) {
-          throw new Error('Stripe configuration error: The API keys are not properly set up. Please contact support.');
+          throw new Error('Payment configuration error: The API keys are not properly set up. Please contact support.');
         } else if (errorData.error && errorData.error.includes('Invalid API Key')) {
-          throw new Error('Stripe API key is invalid. Please contact support.');
-        } else if (errorData.error && errorData.error.includes('price_id')) {
-          throw new Error('Stripe price configuration is missing. Please contact support.');
+          throw new Error('API key is invalid. Please contact support.');
+        } else if (errorData.error && errorData.error.includes('price_id') || errorData.error.includes('product_id')) {
+          throw new Error('Price/product configuration is missing. Please contact support.');
         } else {
           throw new Error(errorData.error || 'Failed to create checkout session');
         }
@@ -68,9 +73,9 @@ export default function Upgrade() {
         return;
       }
       
-      // Redirect to Stripe checkout
+      // Redirect to checkout
       if (data.url) {
-        console.log('Redirecting to Stripe checkout:', data.url);
+        console.log(`Redirecting to ${paymentMethod} checkout:`, data.url);
         window.location.href = data.url;
       } else {
         throw new Error('No checkout URL returned');
@@ -109,7 +114,38 @@ export default function Upgrade() {
         
         <div className="container mx-auto px-4 py-12">
           <h1 className="text-4xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">Upgrade to Premium</h1>
-          <p className="text-xl text-gray-400 text-center mb-12">Unlock powerful features to maximize your earnings</p>
+          <p className="text-xl text-gray-400 text-center mb-8">Unlock powerful features to maximize your earnings</p>
+          
+          {/* Payment Method Selector */}
+          <div className="max-w-md mx-auto mb-8">
+            <div className="bg-gray-900 rounded-lg p-4 flex justify-center space-x-4">
+              <button
+                onClick={() => setPaymentMethod('stripe')}
+                className={`px-4 py-2 rounded-md transition-all ${
+                  paymentMethod === 'stripe' 
+                    ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white' 
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                Pay with Stripe
+              </button>
+              <button
+                onClick={() => setPaymentMethod('polar')}
+                className={`px-4 py-2 rounded-md transition-all ${
+                  paymentMethod === 'polar' 
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white' 
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                Pay with Polar
+              </button>
+            </div>
+            <p className="text-center text-gray-500 text-sm mt-2">
+              {paymentMethod === 'stripe' 
+                ? 'Stripe: Credit/debit cards accepted worldwide' 
+                : 'Polar: Modern payment platform with enhanced features'}
+            </p>
+          </div>
           
           {error && (
             <div className="max-w-md mx-auto mb-8 bg-red-900/50 border-l-4 border-red-500 text-white p-4 rounded-md">
@@ -178,7 +214,11 @@ export default function Upgrade() {
                   
                   <button
                     onClick={() => handleUpgradeClick('monthly')}
-                    className="w-full bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold py-3 px-4 rounded-lg hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg"
+                    className={`w-full font-bold py-3 px-4 rounded-lg transition-all shadow-lg ${
+                      paymentMethod === 'stripe'
+                        ? 'bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white'
+                        : 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white'
+                    }`}
                   >
                     Choose Monthly
                   </button>
@@ -230,7 +270,11 @@ export default function Upgrade() {
                   
                   <button
                     onClick={() => handleUpgradeClick('annual')}
-                    className="w-full bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:from-cyan-700 hover:to-teal-700 transition-all shadow-lg"
+                    className={`w-full font-bold py-3 px-4 rounded-lg transition-all shadow-lg ${
+                      paymentMethod === 'stripe'
+                        ? 'bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white'
+                        : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
+                    }`}
                   >
                     Choose Annual
                   </button>
@@ -252,19 +296,19 @@ export default function Upgrade() {
                       <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
-                      Advanced Analytics
+                      All Premium Features
                     </li>
                     <li className="flex items-center">
                       <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
-                      Earnings Projections
+                      No Recurring Payments
                     </li>
                     <li className="flex items-center">
                       <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
-                      Data Export
+                      Lifetime Updates
                     </li>
                     <li className="flex items-center">
                       <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -276,13 +320,17 @@ export default function Upgrade() {
                       <svg className="h-5 w-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
-                      Never Pay Again
+                      Best Long-term Value
                     </li>
                   </ul>
                   
                   <button
                     onClick={() => handleUpgradeClick('lifetime')}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg"
+                    className={`w-full font-bold py-3 px-4 rounded-lg transition-all shadow-lg ${
+                      paymentMethod === 'stripe'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
+                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white'
+                    }`}
                   >
                     Choose Lifetime
                   </button>
@@ -291,9 +339,23 @@ export default function Upgrade() {
             </div>
           )}
           
-          <div className="mt-12 text-center text-gray-400">
-            <p>Questions? Contact us at support@tiptracker.com</p>
-            <p className="mt-2 text-sm">Secure payments processed by Stripe</p>
+          {/* Payment Method Information */}
+          <div className="mt-12 max-w-3xl mx-auto text-center">
+            <h3 className="text-xl font-semibold mb-4">About {paymentMethod === 'stripe' ? 'Stripe' : 'Polar'} Payments</h3>
+            <p className="text-gray-400 mb-4">
+              {paymentMethod === 'stripe' 
+                ? 'Stripe is a secure payment processor trusted by millions of businesses worldwide. Your payment information is encrypted and never stored on our servers.'
+                : 'Polar is a modern payment platform designed specifically for digital products. It offers enhanced features and a seamless checkout experience.'}
+            </p>
+            <div className="flex justify-center space-x-4 mt-4">
+              {paymentMethod === 'stripe' ? (
+                <img src="/stripe-logo.png" alt="Stripe" className="h-8" />
+              ) : (
+                <div className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-400">
+                  Powered by Polar.sh
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
