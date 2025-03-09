@@ -176,8 +176,15 @@ export default function Dashboard() {
     <div className="min-h-screen bg-black text-white">
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 safe-area-inset">
         <style jsx global>{`
+          /* Safe area insets for modern iOS devices */
+          .safe-area-inset {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+          }
+          
           .input-section, .totals-section, .tip-list, .calendar-container {
             background: linear-gradient(145deg, #141414, #1c1c1c);
             border: 1px solid #00a3af;
@@ -223,6 +230,7 @@ export default function Dashboard() {
             min-width: 100px;
             box-shadow: 0 2px 8px rgba(0, 163, 175, 0.2);
             transition: all 0.3s ease;
+            -webkit-appearance: none; /* Remove default iOS styling */
           }
           
           .input-section input:focus, .input-section button:focus {
@@ -303,6 +311,7 @@ export default function Dashboard() {
             max-height: 240px;
             overflow-y: auto;
             margin: 0;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
           }
           
           .tip-list li {
@@ -515,6 +524,8 @@ export default function Dashboard() {
             
             .input-section input, .input-section button {
               width: 100%;
+              font-size: 16px; /* Larger font for better touch targets */
+              padding: 14px 16px; /* Taller inputs for better touch targets */
             }
             
             .totals-section {
@@ -523,8 +534,8 @@ export default function Dashboard() {
             }
             
             .calendar-day {
-              min-height: 50px;
-              padding: 6px;
+              min-height: 45px;
+              padding: 4px;
             }
             
             .calendar-day span:first-child {
@@ -534,10 +545,64 @@ export default function Dashboard() {
             .calendar-day .tip-text {
               font-size: 10px;
             }
+            
+            .tip-list li {
+              padding: 14px 8px; /* Taller list items for better touch targets */
+            }
+            
+            .tip-list .actions {
+              gap: 4px;
+            }
+            
+            .tip-list button {
+              padding: 6px 10px; /* Larger buttons for better touch targets */
+              font-size: 13px;
+            }
+          }
+          
+          /* iPhone-specific optimizations */
+          @media screen and (max-width: 428px) { /* iPhone 13 Pro Max width */
+            .calendar-view {
+              gap: 4px;
+            }
+            
+            .calendar-day {
+              min-height: 40px;
+              padding: 2px;
+            }
+            
+            .calendar-day span:first-child {
+              font-size: 11px;
+            }
+            
+            .calendar-day .tip-text {
+              font-size: 9px;
+              padding: 1px 3px;
+            }
+            
+            .section-title {
+              font-size: 20px;
+            }
+            
+            .total-card .amount {
+              font-size: 20px;
+            }
+            
+            .total-card h3 {
+              font-size: 12px;
+            }
+            
+            .tip-list .date {
+              font-size: 13px;
+            }
+            
+            .tip-list .amount {
+              font-size: 13px;
+            }
           }
         `}</style>
 
-        <h1 className="section-title mx-auto text-center mb-8">Tip Tracker Dashboard</h1>
+        <h1 className="section-title mx-auto text-center mb-6">Tip Tracker</h1>
 
         <div className="dashboard-container">
           {/* Totals Section */}
@@ -575,6 +640,31 @@ export default function Dashboard() {
               required 
             />
             <button onClick={addTip}>Add Tip</button>
+          </div>
+
+          {/* Calendar View */}
+          <div className="calendar-container">
+            <div className="calendar-header">
+              <h2 className="calendar-title">
+                {selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h2>
+              <div className="calendar-nav">
+                <button onClick={() => changeMonth(-1)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path fillRule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                  </svg>
+                </button>
+                <button onClick={() => setSelectedMonth(new Date())}>
+                  Today
+                </button>
+                <button onClick={() => changeMonth(1)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="calendar-view" id="calendarView"></div>
           </div>
 
           {/* List of Tips */}
@@ -621,31 +711,6 @@ export default function Dashboard() {
                   ))}
               </ul>
             )}
-          </div>
-
-          {/* Calendar View */}
-          <div className="calendar-container">
-            <div className="calendar-header">
-              <h2 className="calendar-title">
-                {selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </h2>
-              <div className="calendar-nav">
-                <button onClick={() => changeMonth(-1)}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path fillRule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
-                  </svg>
-                </button>
-                <button onClick={() => setSelectedMonth(new Date())}>
-                  Today
-                </button>
-                <button onClick={() => changeMonth(1)}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div className="calendar-view" id="calendarView"></div>
           </div>
         </div>
       </main>
