@@ -33,11 +33,12 @@ export default function TipsPage() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Check if user is logged in
+  // Check if user is logged in - for website
   useEffect(() => {
+    // This needs to run only in the browser
+    if (!isBrowser()) return;
+    
     const checkUser = async () => {
-      if (!isBrowser()) return;
-      
       try {
         // Get current session
         const { data: { session } } = await supabase.auth.getSession();
@@ -47,10 +48,8 @@ export default function TipsPage() {
           setUser(session.user);
           loadTips(session.user.id);
         } else {
-          console.log('No user logged in, redirecting to login');
+          console.log('No user logged in');
           setIsLoading(false);
-          // Uncomment to redirect to login
-          // router.push('/pages/login');
         }
       } catch (err) {
         console.error('Error checking auth:', err);
@@ -72,8 +71,6 @@ export default function TipsPage() {
           console.log('User signed out');
           setUser(null);
           setTips([]);
-          // Uncomment to redirect to login
-          // router.push('/pages/login');
         }
       }
     );
@@ -184,33 +181,94 @@ export default function TipsPage() {
     }
   };
   
-  // Handle demo login
+  // Handle demo login - for website
   const handleDemoLogin = async () => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'demo@example.com',
-        password: 'password123'
+      setIsLoading(true);
+      
+      // Create a random demo account for testing
+      const demoEmail = `demo${Math.floor(Math.random() * 10000)}@example.com`;
+      const demoPassword = 'password123';
+      
+      console.log('Creating demo account:', demoEmail);
+      
+      // Sign up with Supabase
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: demoEmail,
+        password: demoPassword
       });
       
-      if (error) {
-        console.error('Demo login error:', error);
+      if (signUpError) {
+        console.error('Demo signup error:', signUpError);
+        toast({
+          title: 'Error creating demo account',
+          description: signUpError.message,
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log('Demo signup response:', signUpData);
+      
+      // If we got a session, we're already logged in
+      if (signUpData.session) {
+        console.log('Demo account created and logged in:', signUpData.user);
+        toast({
+          title: 'Demo account created',
+          description: 'You are now logged in with a demo account',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      
+      // Otherwise, try to sign in with the demo credentials
+      console.log('Signing in with demo account');
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: demoEmail,
+        password: demoPassword
+      });
+      
+      if (signInError) {
+        console.error('Demo login error:', signInError);
         toast({
           title: 'Login failed',
-          description: error.message,
+          description: signInError.message,
           status: 'error',
           duration: 5000,
           isClosable: true,
         });
       } else {
-        console.log('Demo login successful:', data);
+        console.log('Demo login successful:', signInData);
+        toast({
+          title: 'Logged in',
+          description: 'You are now logged in with a demo account',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
       }
     } catch (err) {
       console.error('Unexpected error during demo login:', err);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
   
+  // Don't render during SSR for Next.js
   if (!isBrowser()) {
-    return null; // Don't render during SSR
+    return null;
   }
   
   if (isLoading) {
@@ -232,9 +290,9 @@ export default function TipsPage() {
           <Alert status="info" borderRadius="md">
             <AlertIcon />
             <Box>
-              <AlertTitle>Not logged in</AlertTitle>
+              <AlertTitle>Welcome to Tip Tracker</AlertTitle>
               <AlertDescription>
-                You need to log in to track your tips.
+                Click the button below to create a demo account and start tracking your tips.
               </AlertDescription>
             </Box>
           </Alert>
@@ -246,8 +304,9 @@ export default function TipsPage() {
             mx="auto"
             display="block"
             width="200px"
+            isLoading={isLoading}
           >
-            Use Demo Account
+            Create Demo Account
           </Button>
         </VStack>
       </Container>

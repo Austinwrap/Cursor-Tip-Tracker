@@ -16,7 +16,8 @@ import {
   useToast,
   VStack,
   Text,
-  Box
+  Box,
+  Code
 } from '@chakra-ui/react';
 
 export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSaved }) {
@@ -24,6 +25,29 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
   const [isLoading, setIsLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState('');
   const toast = useToast();
+
+  // Format date for display
+  const formatDate = (date) => {
+    if (!date) return 'Selected Date';
+    
+    if (typeof date === 'string') {
+      // Try to parse the string date
+      try {
+        const parsedDate = new Date(date);
+        return parsedDate.toLocaleDateString();
+      } catch (e) {
+        return date;
+      }
+    }
+    
+    // If it's a Date object
+    if (date instanceof Date) {
+      return date.toLocaleDateString();
+    }
+    
+    // Fallback
+    return String(date);
+  };
 
   // ULTRA simple submit handler - just save the number!
   const handleSubmit = async (e) => {
@@ -46,22 +70,29 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
     
     try {
       // Log all the information for debugging
+      const formattedDate = date instanceof Date 
+        ? date.toISOString().split('T')[0] 
+        : typeof date === 'string' 
+          ? date 
+          : new Date().toISOString().split('T')[0];
+          
       const debugData = { 
         userId, 
-        date: date?.toISOString?.() || date, 
-        formattedDate: date?.toISOString?.().split('T')[0] || date,
+        date: date instanceof Date ? date.toISOString() : date,
+        formattedDate,
         amount, 
         numericAmount: Number(amount)
       };
+      
       console.log('Submitting tip with data:', debugData);
-      setDebugInfo(`Submitting: ${JSON.stringify(debugData)}`);
+      setDebugInfo(`Submitting: ${JSON.stringify(debugData, null, 2)}`);
       
       // Call the simplified addTip function
-      const { data, error } = await addTip(userId, date, amount);
+      const { data, error } = await addTip(userId, formattedDate, amount);
       
       if (error) {
         console.error('Error saving tip:', error);
-        setDebugInfo(`Error: ${JSON.stringify(error)}`);
+        setDebugInfo(`Error: ${JSON.stringify(error, null, 2)}`);
         toast({
           title: 'Error saving tip',
           description: error.message || 'Please try again',
@@ -72,10 +103,10 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
       } else {
         // Success!
         console.log('Tip saved successfully:', data);
-        setDebugInfo(`Success: ${JSON.stringify(data)}`);
+        setDebugInfo(`Success: ${JSON.stringify(data, null, 2)}`);
         toast({
           title: 'Tip saved!',
-          description: `$${amount} has been saved for ${date?.toLocaleDateString?.() || date}`,
+          description: `$${amount} has been saved for ${formatDate(date)}`,
           status: 'success',
           duration: 3000,
           isClosable: true,
@@ -105,7 +136,7 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Add Tip for {date?.toLocaleDateString?.() || date}</ModalHeader>
+        <ModalHeader>Add Tip for {formatDate(date)}</ModalHeader>
         <ModalCloseButton />
         <ModalBody pb={6}>
           <form onSubmit={handleSubmit}>
@@ -131,7 +162,7 @@ export default function TipEntryModal({ isOpen, onClose, date, userId, onTipSave
                   fontFamily="monospace"
                   overflowX="auto"
                 >
-                  <Text>{debugInfo}</Text>
+                  <Code whiteSpace="pre-wrap">{debugInfo}</Code>
                 </Box>
               )}
               

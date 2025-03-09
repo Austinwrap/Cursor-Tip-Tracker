@@ -4,20 +4,27 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://bggsscexogsptcnnwckj.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZ3NzY2V4b2dzcHRjbm53Y2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEzNjgwMDQsImV4cCI6MjA1Njk0NDAwNH0.yRmBEA5ddBqoM-N9iOjQpyMtxQcBlbEUJ-diV396J94';
 
-// Create the Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  }
-});
-
 // Helper function to check if we're in a browser environment
 export const isBrowser = () => typeof window !== 'undefined';
 
+// Create the Supabase client only in browser environment
+export const supabase = isBrowser() 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    })
+  : null;
+
 // SUPER SIMPLE function to add a tip - just save the number!
 export async function addTip(userId, date, amount) {
+  if (!isBrowser()) {
+    console.error('addTip called on server side');
+    return { error: { message: 'Cannot add tip on server side' } };
+  }
+  
   console.log('Saving tip:', { userId, date, amount });
   
   try {
@@ -89,6 +96,11 @@ export async function addTip(userId, date, amount) {
 
 // Simple function to get tips for a user
 export async function getUserTips(userId) {
+  if (!isBrowser()) {
+    console.error('getUserTips called on server side');
+    return { data: [], error: { message: 'Cannot get tips on server side' } };
+  }
+  
   if (!userId) {
     console.error('No user ID provided');
     return { data: [], error: { message: 'User ID is required' } };
