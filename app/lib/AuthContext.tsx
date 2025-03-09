@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, getUserSubscriptionStatus } from './supabase';
+import { supabase, User, getUserSubscriptionStatus, getUserPremiumStatus } from './supabase';
 import { useRouter } from 'next/navigation';
 import * as userService from './userService';
 
@@ -10,6 +10,11 @@ type AuthContextType = {
   enhancedUser: userService.EnhancedUser | null;
   userSettings: userService.UserSettings | null;
   isPaid: boolean;
+  premiumStatus: {
+    planType: string;
+    premiumFeaturesEnabled: boolean;
+    subscriptionStatus: string;
+  };
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any; success: boolean }>;
   signUp: (email: string, password: string) => Promise<{ error: any; success: boolean }>;
@@ -18,6 +23,7 @@ type AuthContextType = {
   toggleDevMode: () => void;
   updateProfile: (profileData: Partial<userService.EnhancedUser>) => Promise<boolean>;
   updateSettings: (settingsData: Partial<userService.UserSettings>) => Promise<boolean>;
+  refreshPremiumStatus: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,6 +31,11 @@ const AuthContext = createContext<AuthContextType>({
   enhancedUser: null,
   userSettings: null,
   isPaid: false,
+  premiumStatus: {
+    planType: '',
+    premiumFeaturesEnabled: false,
+    subscriptionStatus: ''
+  },
   loading: true,
   signIn: async () => ({ error: null, success: false }),
   signUp: async () => ({ error: null, success: false }),
@@ -33,6 +44,7 @@ const AuthContext = createContext<AuthContextType>({
   toggleDevMode: () => {},
   updateProfile: async () => false,
   updateSettings: async () => false,
+  refreshPremiumStatus: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -40,9 +52,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [enhancedUser, setEnhancedUser] = useState<userService.EnhancedUser | null>(null);
   const [userSettings, setUserSettings] = useState<userService.UserSettings | null>(null);
   const [isPaid, setIsPaid] = useState<boolean>(false);
+  const [premiumStatus, setPremiumStatus] = useState<{
+    planType: string;
+    premiumFeaturesEnabled: boolean;
+    subscriptionStatus: string;
+  }>({
+    planType: '',
+    premiumFeaturesEnabled: false,
+    subscriptionStatus: ''
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [devMode, setDevMode] = useState<boolean>(false);
   const router = useRouter();
+
+  // Function to refresh premium status
+  const refreshPremiumStatus = async () => {
+    if (!user) return;
+    
+    try {
+      // Check if user is on paid tier
+      const isPaidUser = await getUserSubscriptionStatus(user.id);
+      setIsPaid(isPaidUser);
+      
+      // Get detailed premium status
+      const premiumStatusData = await getUserPremiumStatus(user.id);
+      setPremiumStatus({
+        planType: premiumStatusData.planType,
+        premiumFeaturesEnabled: premiumStatusData.premiumFeaturesEnabled,
+        subscriptionStatus: premiumStatusData.subscriptionStatus
+      });
+    } catch (error) {
+      console.error('Error refreshing premium status:', error);
+    }
+  };
 
   // Load enhanced user data
   const loadEnhancedUserData = async (userId: string) => {
@@ -58,6 +100,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (settings) {
         setUserSettings(settings);
       }
+      
+      // Check premium status
+      await refreshPremiumStatus();
       
       // Update last login
       await userService.updateUserLastLogin(userId);
@@ -313,7 +358,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         enhancedUser,
         userSettings,
-        isPaid: isPaid || devMode,
+        isPaid,
+        premiumStatus,
         loading,
         signIn,
         signUp,
@@ -322,6 +368,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleDevMode,
         updateProfile,
         updateSettings,
+        refreshPremiumStatus
       }}
     >
       {children}

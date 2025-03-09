@@ -36,18 +36,21 @@ export async function POST(request: Request) {
         const metadata = session.metadata || {};
         const userId = metadata.userId;
         const plan = metadata.plan || 'monthly';
+        const planType = metadata.plan_type || (plan === 'monthly' ? 'starter' : plan === 'annual' ? 'pro' : 'ultimate');
         
         if (!userId) {
           console.error('No user ID found in session metadata');
           return NextResponse.json({ error: 'No user ID found' }, { status: 400 });
         }
         
-        console.log(`Processing completed checkout for user: ${userId}, plan: ${plan}`);
+        console.log(`Processing completed checkout for user: ${userId}, plan: ${plan}, plan type: ${planType}`);
         
         // Update user's subscription status in database
         const updateData: any = { 
           is_paid: true,
           subscription_type: plan,
+          plan_type: planType,
+          premium_features_enabled: true,
           updated_at: new Date().toISOString()
         };
         
@@ -58,6 +61,14 @@ export async function POST(request: Request) {
           updateData.subscription_status = 'lifetime';
         }
         
+        // Store additional customer information if available
+        if (session.customer) {
+          updateData.customer_name = session.customer.name || '';
+          updateData.customer_email = session.customer.email || '';
+          updateData.customer_id = session.customer.id || '';
+        }
+        
+        // Update the user record in Supabase
         const { error } = await supabase
           .from('users')
           .update(updateData)
@@ -66,6 +77,26 @@ export async function POST(request: Request) {
         if (error) {
           console.error('Error updating user subscription status:', error);
           return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+        }
+        
+        // Also store the purchase in a separate table for record-keeping
+        const { error: purchaseError } = await supabase
+          .from('purchases')
+          .insert({
+            user_id: userId,
+            plan_type: planType,
+            subscription_type: plan,
+            amount: session.amount_total || 0,
+            currency: session.currency || 'USD',
+            payment_processor: 'polar',
+            payment_id: session.id || '',
+            purchase_date: new Date().toISOString(),
+            metadata: metadata
+          });
+        
+        if (purchaseError) {
+          console.error('Error recording purchase:', purchaseError);
+          // Continue anyway, as the user's status has been updated
         }
         
         console.log(`User ${userId} subscription activated successfully with plan: ${plan}`);
@@ -84,12 +115,15 @@ export async function POST(request: Request) {
         }
         
         const status = subscription.status;
+        const planType = metadata.plan_type || 'starter';
         
         // Update subscription status
         const { error } = await supabase
           .from('users')
           .update({ 
             subscription_status: status,
+            premium_features_enabled: status === 'active',
+            plan_type: planType,
             updated_at: new Date().toISOString()
           })
           .eq('id', userId);
@@ -114,7 +148,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'No user ID found' }, { status: 400 });
         }
         
-        const subscriptionType = metadata.plan;
+        const subscriptionType = metadata.subscription_type || metadata.plan || 'monthly';
         
         // Don't change status for lifetime subscriptions
         if (subscriptionType === 'lifetime') {
@@ -128,6 +162,7 @@ export async function POST(request: Request) {
           .update({ 
             is_paid: false,
             subscription_status: 'canceled',
+            premium_features_enabled: false,
             updated_at: new Date().toISOString()
           })
           .eq('id', userId);
@@ -146,7 +181,8 @@ export async function POST(request: Request) {
         const payment = event.data;
         const metadata = payment.metadata || {};
         const userId = metadata.userId;
-        const plan = metadata.plan;
+        const plan = metadata.plan || metadata.subscription_type;
+        const planType = metadata.plan_type || 'ultimate';
         
         if (!userId) {
           console.log('Payment without user ID, ignoring');
@@ -163,6 +199,8 @@ export async function POST(request: Request) {
               is_paid: true,
               subscription_status: 'lifetime',
               subscription_type: 'lifetime',
+              plan_type: planType,
+              premium_features_enabled: true,
               updated_at: new Date().toISOString()
             })
             .eq('id', userId);
