@@ -19,7 +19,8 @@ export const supabase = {
           eq: () => ({ data: null, error: null })
         }),
         single: () => ({ data: null, error: null })
-      })
+      }),
+      single: () => ({ data: null, error: null })
     }),
     insert: () => ({ select: () => ({ data: null, error: null }) }),
     update: () => ({ eq: () => ({ data: null, error: null }) }),
