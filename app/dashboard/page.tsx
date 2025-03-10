@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/AuthContext';
 import Header from '../components/Header';
 import AuthCheck from '../components/AuthCheck';
-import { supabase } from '../lib/supabase';
 
 // Define the Tip type
 interface Tip {
@@ -44,52 +43,16 @@ export default function Dashboard() {
         // Get the storage key for this user
         const storageKey = `tips_${user.id}`;
         
-        // Try to load from Supabase first
-        const { data: supabaseTips, error } = await supabase
-          .from('tips')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false });
-        
-        if (error) {
-          console.error('Error loading tips from Supabase:', error);
-          
-          // Fall back to localStorage if Supabase fails
-          const storedTips = localStorage.getItem(storageKey);
-          if (storedTips) {
-            const parsedTips = JSON.parse(storedTips);
-            setTips(parsedTips);
-            console.log('Loaded tips from localStorage:', parsedTips.length);
-            setSyncStatus(`Loaded ${parsedTips.length} tips from local storage`);
-          } else {
-            setTips([]);
-            setSyncStatus('No tips found');
-          }
-        } else if (supabaseTips && supabaseTips.length > 0) {
-          // We have tips from Supabase
-          setTips(supabaseTips);
-          console.log('Loaded tips from Supabase:', supabaseTips.length);
-          setSyncStatus(`Loaded ${supabaseTips.length} tips from Supabase`);
-          
-          // Save to localStorage as backup
-          localStorage.setItem(storageKey, JSON.stringify(supabaseTips));
+        // Load from localStorage
+        const storedTips = localStorage.getItem(storageKey);
+        if (storedTips) {
+          const parsedTips = JSON.parse(storedTips);
+          setTips(parsedTips);
+          console.log('Loaded tips from localStorage:', parsedTips.length);
+          setSyncStatus(`Loaded ${parsedTips.length} tips from local storage`);
         } else {
-          // No tips in Supabase, check localStorage
-          const storedTips = localStorage.getItem(storageKey);
-          if (storedTips) {
-            const parsedTips = JSON.parse(storedTips);
-            setTips(parsedTips);
-            console.log('Loaded tips from localStorage:', parsedTips.length);
-            setSyncStatus(`Loaded ${parsedTips.length} tips from local storage`);
-            
-            // Try to sync localStorage tips to Supabase
-            if (parsedTips.length > 0) {
-              syncTipsToSupabase(parsedTips);
-            }
-          } else {
-            setTips([]);
-            setSyncStatus('No tips found');
-          }
+          setTips([]);
+          setSyncStatus('No tips found');
         }
         
         // Calculate totals
@@ -152,51 +115,6 @@ export default function Dashboard() {
     setYearlyTotal(yearlySum);
   };
 
-  // Sync tips from localStorage to Supabase
-  const syncTipsToSupabase = async (tipsToSync: Tip[]) => {
-    if (!user) return;
-    
-    setIsSyncing(true);
-    setSyncStatus('Syncing tips to Supabase...');
-    
-    try {
-      // For each tip, insert or update in Supabase
-      for (const tip of tipsToSync) {
-        const { error } = await supabase
-          .from('tips')
-          .upsert({
-            user_id: user.id,
-            date: tip.date,
-            amount: tip.amount
-          });
-        
-        if (error) {
-          console.error('Error syncing tip to Supabase:', error);
-        }
-      }
-      
-      // Refresh tips from Supabase
-      const { data: refreshedTips, error } = await supabase
-        .from('tips')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
-      
-      if (error) {
-        console.error('Error refreshing tips from Supabase:', error);
-      } else if (refreshedTips) {
-        setTips(refreshedTips);
-        localStorage.setItem(`tips_${user.id}`, JSON.stringify(refreshedTips));
-        setSyncStatus(`Synced ${refreshedTips.length} tips to Supabase`);
-      }
-    } catch (error) {
-      console.error('Error syncing tips to Supabase:', error);
-      setSyncStatus('Error syncing tips to Supabase');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   // Add a new tip
   const addTip = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,45 +150,15 @@ export default function Dashboard() {
     const updatedTips = [newTip, ...tips];
     setTips(updatedTips);
     
-    // Save to localStorage as backup
+    // Save to localStorage
     localStorage.setItem(`tips_${user.id}`, JSON.stringify(updatedTips));
     
     // Clear form
     setTipDate('');
     setTipAmount('');
     
-    // Save to Supabase
-    try {
-      const { data, error } = await supabase
-        .from('tips')
-        .insert([
-          { user_id: user.id, date: tipDate, amount }
-        ])
-        .select();
-      
-      if (error) {
-        console.error('Error saving tip to Supabase:', error);
-        setSyncStatus('Tip saved locally but failed to save to Supabase');
-      } else {
-        console.log('Tip saved to Supabase:', data);
-        setSyncStatus('Tip saved successfully');
-        
-        // Refresh tips from Supabase to get the server-generated ID
-        const { data: refreshedTips, error: refreshError } = await supabase
-          .from('tips')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false });
-        
-        if (!refreshError && refreshedTips) {
-          setTips(refreshedTips);
-          localStorage.setItem(`tips_${user.id}`, JSON.stringify(refreshedTips));
-        }
-      }
-    } catch (error) {
-      console.error('Exception saving tip to Supabase:', error);
-      setSyncStatus('Tip saved locally but failed to save to Supabase');
-    }
+    // Update status
+    setSyncStatus('Tip saved successfully');
     
     // Recalculate totals
     calculateTotals();
@@ -289,25 +177,8 @@ export default function Dashboard() {
     // Save to localStorage
     localStorage.setItem(`tips_${user.id}`, JSON.stringify(updatedTips));
     
-    // Delete from Supabase if we have an ID
-    if (tipToDelete.id) {
-      try {
-        const { error } = await supabase
-          .from('tips')
-          .delete()
-          .eq('id', tipToDelete.id);
-        
-        if (error) {
-          console.error('Error deleting tip from Supabase:', error);
-          setSyncStatus('Tip deleted locally but failed to delete from Supabase');
-        } else {
-          setSyncStatus('Tip deleted successfully');
-        }
-      } catch (error) {
-        console.error('Exception deleting tip from Supabase:', error);
-        setSyncStatus('Tip deleted locally but failed to delete from Supabase');
-      }
-    }
+    // Update status
+    setSyncStatus('Tip deleted successfully');
     
     // Recalculate totals
     calculateTotals();

@@ -30,13 +30,15 @@ This guide will help you set up your Supabase project for the Tip Tracker applic
 
 ## Step 4: Update Environment Variables
 
-Make sure your `.env.local` file has the following variables:
+Make sure your `.env.local` file has the following variables (replace with your actual values):
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://sobpwraeujxrdrddvqcz.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvYnB3cmFldWp4cmRyZGR2cWN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1Njg4NTIsImV4cCI6MjA1NzE0NDg1Mn0.VVYD8gohu4C7NGFJUIsMXsD_HoO_MSVR0ReZFCC8DqI
-DATABASE_URL=postgres://postgres.sobpwraeujxrdrddvqcz:Austinwrap1!1990!!@aws-0-us-west-1.pooler.supabase.com:5432/postgres
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+DATABASE_URL=your-database-connection-string
 ```
+
+**IMPORTANT**: Never commit your `.env.local` file or expose these credentials in public repositories.
 
 ## Step 5: Test the Connection
 

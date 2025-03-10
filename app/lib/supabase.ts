@@ -1,127 +1,58 @@
-import { createClient } from '@supabase/supabase-js';
+// This is a mock version of the Supabase client for compatibility
+// The actual Supabase functionality has been removed to use localStorage instead
 
-// Initialize the Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Mock Supabase client
+export const supabase = {
+  auth: {
+    getSession: async () => ({ data: { session: null }, error: null }),
+    getUser: async () => ({ data: { user: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signUp: async () => ({ data: null, error: null }),
+    signInWithPassword: async () => ({ data: null, error: null }),
+    signOut: async () => ({ error: null })
+  },
+  from: () => ({
+    select: () => ({
+      eq: () => ({
+        order: () => ({
+          single: () => ({ data: null, error: null }),
+          eq: () => ({ data: null, error: null })
+        }),
+        single: () => ({ data: null, error: null })
+      })
+    }),
+    insert: () => ({ select: () => ({ data: null, error: null }) }),
+    update: () => ({ eq: () => ({ data: null, error: null }) }),
+    delete: () => ({ eq: () => ({ error: null }) }),
+    upsert: () => ({ error: null })
+  })
+};
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Function to save a tip to Supabase
+// Mock functions
 export async function saveTipToSupabase(userId: string, date: string, amount: number) {
-  console.log('Saving tip to Supabase:', { userId, date, amount });
-  
-  // Validate inputs
-  if (!userId) {
-    console.error('Cannot save tip: No user ID provided');
-    return { error: 'No user ID provided' };
-  }
-  
-  if (!date) {
-    console.error('Cannot save tip: No date provided');
-    return { error: 'No date provided' };
-  }
-  
-  if (amount === undefined || amount === null || isNaN(amount)) {
-    console.error('Cannot save tip: Invalid amount', amount);
-    return { error: 'Invalid amount' };
-  }
-  
-  // Format date to YYYY-MM-DD for consistency
-  const formattedDate = new Date(date).toISOString().split('T')[0];
-  
-  try {
-    // Check if a tip already exists for this date
-    const { data: existingTips, error: fetchError } = await supabase
-      .from('tips')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('date', formattedDate);
-    
-    if (fetchError) {
-      console.error('Error fetching existing tips:', fetchError);
-      return { error: fetchError };
-    }
-    
-    let result;
-    
-    // If a tip exists for this date, update it
-    if (existingTips && existingTips.length > 0) {
-      console.log('Updating existing tip for date:', formattedDate);
-      result = await supabase
-        .from('tips')
-        .update({ amount })
-        .eq('id', existingTips[0].id);
-    } else {
-      // Otherwise, insert a new tip
-      console.log('Inserting new tip for date:', formattedDate);
-      result = await supabase
-        .from('tips')
-        .insert([
-          { user_id: userId, date: formattedDate, amount }
-        ]);
-    }
-    
-    if (result.error) {
-      console.error('Error saving tip to Supabase:', result.error);
-      return { error: result.error };
-    }
-    
-    console.log('Tip saved successfully to Supabase');
-    return { success: true };
-  } catch (error) {
-    console.error('Exception saving tip to Supabase:', error);
-    return { error };
-  }
+  console.log('Mock saveTipToSupabase called:', { userId, date, amount });
+  return { success: true };
 }
 
-// Function to get tips from Supabase
 export async function getSupabaseTips(userId: string) {
-  if (!userId) {
-    console.error('Cannot get tips: No user ID provided');
-    return { error: 'No user ID provided' };
+  console.log('Mock getSupabaseTips called:', { userId });
+  
+  // Try to get tips from localStorage
+  try {
+    const storageKey = `tips_${userId}`;
+    const storedTips = localStorage.getItem(storageKey);
+    
+    if (storedTips) {
+      return { data: JSON.parse(storedTips) };
+    }
+  } catch (error) {
+    console.error('Error getting tips from localStorage:', error);
   }
   
-  try {
-    const { data, error } = await supabase
-      .from('tips')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching tips from Supabase:', error);
-      return { error };
-    }
-    
-    return { data };
-  } catch (error) {
-    console.error('Exception fetching tips from Supabase:', error);
-    return { error };
-  }
+  return { data: [] };
 }
 
-// Function to delete a tip from Supabase
 export async function deleteTipFromSupabase(tipId: string) {
-  if (!tipId) {
-    console.error('Cannot delete tip: No tip ID provided');
-    return { error: 'No tip ID provided' };
-  }
-  
-  try {
-    const { error } = await supabase
-      .from('tips')
-      .delete()
-      .eq('id', tipId);
-    
-    if (error) {
-      console.error('Error deleting tip from Supabase:', error);
-      return { error };
-    }
-    
-    console.log('Tip deleted successfully from Supabase');
-    return { success: true };
-  } catch (error) {
-    console.error('Exception deleting tip from Supabase:', error);
-    return { error };
-  }
+  console.log('Mock deleteTipFromSupabase called:', { tipId });
+  return { success: true };
 } 

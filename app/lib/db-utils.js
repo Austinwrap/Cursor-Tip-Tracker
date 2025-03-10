@@ -1,73 +1,81 @@
-import { supabase } from './supabase';
-import sql from './postgres';
+// This file provides utility functions for working with tips data
+// It now uses localStorage instead of Supabase or Postgres
 
-// Example function using Supabase client
-export async function getTipsWithSupabase(userId) {
-  const { data, error } = await supabase
-    .from('tips')
-    .select('*')
-    .eq('user_id', userId)
-    .order('date', { ascending: false });
-  
-  if (error) {
-    console.error('Error fetching tips with Supabase client:', error);
-    return { error };
-  }
-  
-  return { data };
-}
-
-// Example function using direct Postgres connection
-export async function getTipsWithPostgres(userId) {
+// Example function to get tips from localStorage
+export async function getTips(userId) {
   try {
-    const tips = await sql`
-      SELECT * FROM tips 
-      WHERE user_id = ${userId} 
-      ORDER BY date DESC
-    `;
+    const storageKey = `tips_${userId}`;
+    const storedTips = localStorage.getItem(storageKey);
     
-    return { data: tips };
+    if (storedTips) {
+      const parsedTips = JSON.parse(storedTips);
+      return parsedTips;
+    }
+    
+    return [];
   } catch (error) {
-    console.error('Error fetching tips with Postgres:', error);
-    return { error };
+    console.error('Error getting tips from localStorage:', error);
+    return [];
   }
 }
 
-// Example function to save a tip using Postgres
-export async function saveTipWithPostgres(userId, date, amount) {
+// Example function to save a tip to localStorage
+export async function saveTip(userId, date, amount) {
   try {
     // Format date to YYYY-MM-DD for consistency
     const formattedDate = new Date(date).toISOString().split('T')[0];
     
+    // Get existing tips
+    const storageKey = `tips_${userId}`;
+    const storedTips = localStorage.getItem(storageKey) || '[]';
+    const tips = JSON.parse(storedTips);
+    
     // Check if a tip already exists for this date
-    const existingTips = await sql`
-      SELECT * FROM tips 
-      WHERE user_id = ${userId} 
-      AND date = ${formattedDate}
-    `;
+    const existingTipIndex = tips.findIndex(tip => tip.date === formattedDate);
     
-    let result;
-    
-    // If a tip exists for this date, update it
-    if (existingTips && existingTips.length > 0) {
-      result = await sql`
-        UPDATE tips 
-        SET amount = ${amount} 
-        WHERE id = ${existingTips[0].id} 
-        RETURNING *
-      `;
+    if (existingTipIndex >= 0) {
+      // Update existing tip
+      tips[existingTipIndex].amount = amount;
+      tips[existingTipIndex].updated_at = new Date().toISOString();
     } else {
-      // Otherwise, insert a new tip
-      result = await sql`
-        INSERT INTO tips (user_id, date, amount) 
-        VALUES (${userId}, ${formattedDate}, ${amount}) 
-        RETURNING *
-      `;
+      // Add new tip
+      tips.push({
+        id: `local_${Date.now()}`,
+        user_id: userId,
+        date: formattedDate,
+        amount: amount,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
     }
     
-    return { data: result[0] };
+    // Save back to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(tips));
+    
+    return { success: true };
   } catch (error) {
-    console.error('Error saving tip with Postgres:', error);
+    console.error('Error saving tip to localStorage:', error);
+    return { error };
+  }
+}
+
+// Example function to delete a tip from localStorage
+export async function deleteTip(userId, tipId) {
+  try {
+    // Get existing tips
+    const storageKey = `tips_${userId}`;
+    const storedTips = localStorage.getItem(storageKey) || '[]';
+    const tips = JSON.parse(storedTips);
+    
+    // Filter out the tip to delete
+    const updatedTips = tips.filter(tip => tip.id !== tipId);
+    
+    // Save back to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(updatedTips));
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting tip from localStorage:', error);
     return { error };
   }
 } 
