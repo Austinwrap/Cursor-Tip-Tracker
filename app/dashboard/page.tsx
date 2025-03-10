@@ -1,33 +1,33 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '../components/Header';
 import { useAuth } from '../lib/AuthContext';
-import { supabase, addTip as saveTipToSupabase, getTips as getSupabaseTips, deleteTip as deleteSupabaseTip } from '../lib/supabase';
+import Header from '../components/Header';
+import AuthCheck from '../components/AuthCheck';
+
+// Define the Tip type
+interface Tip {
+  date: string;
+  amount: number;
+}
 
 export default function Dashboard() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-  const [tips, setTips] = useState<Array<{date: string, amount: number}>>([]);
-  const [weeklyTotal, setWeeklyTotal] = useState('0.00');
-  const [monthlyTotal, setMonthlyTotal] = useState('0.00');
-  const [yearlyTotal, setYearlyTotal] = useState('0.00');
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
-  const [tipDate, setTipDate] = useState<string>('');
-  const [tipAmount, setTipAmount] = useState<string>('');
+  const [tips, setTips] = useState<Tip[]>([]);
+  const [tipDate, setTipDate] = useState('');
+  const [tipAmount, setTipAmount] = useState('');
+  const [weeklyTotal, setWeeklyTotal] = useState(0);
+  const [monthlyTotal, setMonthlyTotal] = useState(0);
+  const [yearlyTotal, setYearlyTotal] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isLoading, setIsLoading] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('');
 
-  // Redirect to signin if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/signin');
-    }
-  }, [user, loading, router]);
-
-  // Load tips from Supabase when user is authenticated
+  // Load tips from localStorage when user is authenticated
   useEffect(() => {
     if (!user) return;
     
@@ -39,93 +39,21 @@ export default function Dashboard() {
         // Get the storage key for this user
         const storageKey = `tips_${user.id}`;
         
-        // Try to load from both sources
-        let supabaseTips = [];
-        let localTips = [];
-        let supabaseError = false;
-        
-        // Try to load from Supabase
-        try {
-          const fetchedTips = await getSupabaseTips(user.id);
-          if (fetchedTips && fetchedTips.length > 0) {
-            supabaseTips = fetchedTips.map(tip => ({
-              date: tip.date,
-              amount: tip.amount
-            }));
-            console.log('Loaded tips from Supabase:', supabaseTips.length);
-          }
-        } catch (error) {
-          console.error('Error loading tips from Supabase:', error);
-          supabaseError = true;
-        }
-        
-        // Try to load from localStorage
-        try {
-          const storedTips = localStorage.getItem(storageKey);
-          if (storedTips) {
-            localTips = JSON.parse(storedTips);
-            console.log('Loaded tips from localStorage:', localTips.length);
-          }
-        } catch (error) {
-          console.error('Error loading tips from localStorage:', error);
-        }
-        
-        // Decide which tips to use
-        if (supabaseTips.length > 0) {
-          // If we have Supabase tips, use those
-          setTips(supabaseTips);
-          setSyncStatus('Tips loaded from database');
-          
-          // Update localStorage with the Supabase data
-          localStorage.setItem(storageKey, JSON.stringify(supabaseTips));
-        } else if (localTips.length > 0) {
-          // If no Supabase tips but we have localStorage tips, use those
-          setTips(localTips);
-          setSyncStatus('Tips loaded from local storage');
-          
-          // If Supabase failed, don't try to sync
-          if (!supabaseError) {
-            // Try to sync localStorage tips to Supabase
-            setIsSyncing(true);
-            setSyncStatus('Syncing tips to database...');
-            
-            let syncCount = 0;
-            for (const tip of localTips) {
-              const success = await saveTipToSupabase(user.id, tip.date, tip.amount);
-              if (success) syncCount++;
-            }
-            
-            if (syncCount > 0) {
-              setSyncStatus(`Synced ${syncCount} of ${localTips.length} tips to database`);
-              
-              // Reload from Supabase to ensure consistency
-              try {
-                const refreshedTips = await getSupabaseTips(user.id);
-                if (refreshedTips && refreshedTips.length > 0) {
-                  const refreshedFormattedTips = refreshedTips.map(tip => ({
-                    date: tip.date,
-                    amount: tip.amount
-                  }));
-                  setTips(refreshedFormattedTips);
-                  localStorage.setItem(storageKey, JSON.stringify(refreshedFormattedTips));
-                }
-              } catch (refreshError) {
-                console.error('Error refreshing tips after sync:', refreshError);
-              }
-            } else {
-              setSyncStatus('Failed to sync tips to database');
-            }
-            
-            setIsSyncing(false);
-          }
+        // Load from localStorage
+        const storedTips = localStorage.getItem(storageKey);
+        if (storedTips) {
+          const parsedTips = JSON.parse(storedTips);
+          setTips(parsedTips);
+          console.log('Loaded tips from localStorage:', parsedTips.length);
+          setSyncStatus(`Loaded ${parsedTips.length} tips from local storage`);
         } else {
-          // No tips found in either source
           setTips([]);
           setSyncStatus('No tips found');
         }
       } catch (error) {
-        console.error('Error in loadTips:', error);
+        console.error('Error loading tips:', error);
         setSyncStatus('Error loading tips');
+        setTips([]);
       } finally {
         setIsLoading(false);
       }
@@ -167,64 +95,20 @@ export default function Dashboard() {
       console.log('Adding tip:', { date, amount, userId: user.id });
       
       // Create the new tip object
-      const newTip = { date, amount };
+      const newTip: Tip = { date, amount };
       
-      // Always update local state first for immediate feedback
+      // Update local state
       const newTips = [...tips, newTip];
       setTips(newTips);
       
-      // Save to localStorage as a backup
+      // Save to localStorage
       const storageKey = `tips_${user.id}`;
       localStorage.setItem(storageKey, JSON.stringify(newTips));
       
-      // Then try to save to Supabase
-      const success = await saveTipToSupabase(user.id, date, amount);
-      
-      if (success) {
-        setSyncStatus('Tip saved successfully');
-        
-        // Reload from Supabase to ensure consistency
-        try {
-          const refreshedTips = await getSupabaseTips(user.id);
-          if (refreshedTips && refreshedTips.length > 0) {
-            const refreshedFormattedTips = refreshedTips.map(tip => ({
-              date: tip.date,
-              amount: tip.amount
-            }));
-            setTips(refreshedFormattedTips);
-            
-            // Update localStorage with the refreshed data
-            localStorage.setItem(storageKey, JSON.stringify(refreshedFormattedTips));
-          }
-        } catch (refreshError) {
-          console.error('Error refreshing tips from Supabase:', refreshError);
-          // We already updated local state, so no need to show an error
-        }
-      } else {
-        setSyncStatus('Saved locally only (database sync failed)');
-        console.error('Failed to save tip to Supabase, but saved locally');
-      }
+      setSyncStatus('Tip saved successfully');
     } catch (error) {
       console.error('Error saving tip:', error);
       setSyncStatus('Error saving tip');
-      
-      // Still try to save locally even if there was an error
-      try {
-        const newTip = { date, amount };
-        const newTips = [...tips, newTip];
-        
-        // Update local state
-        setTips(newTips);
-        
-        // Save to localStorage
-        const storageKey = `tips_${user.id}`;
-        localStorage.setItem(storageKey, JSON.stringify(newTips));
-        
-        setSyncStatus('Tip saved locally only (offline mode)');
-      } catch (localError) {
-        console.error('Error saving tip locally:', localError);
-        setSyncStatus('Failed to save tip');
-      }
     } finally {
       setIsLoading(false);
       // Clear input
@@ -239,58 +123,37 @@ export default function Dashboard() {
       return;
     }
 
-    const newAmount = prompt('Enter new tip amount:', tips[index].amount.toString());
-    if (newAmount && !isNaN(parseFloat(newAmount))) {
-      setIsLoading(true);
-      setSyncStatus('Updating tip...');
+    const date = prompt('Enter date (YYYY-MM-DD):', tips[index].date);
+    if (!date) return;
+
+    const amountStr = prompt('Enter amount:', tips[index].amount.toString());
+    if (!amountStr) return;
+
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount)) {
+      alert('Please enter a valid amount.');
+      return;
+    }
+
+    setIsLoading(true);
+    setSyncStatus('Updating tip...');
+
+    try {
+      // Update the tip in the local state
+      const updatedTips = [...tips];
+      updatedTips[index] = { date, amount };
+      setTips(updatedTips);
       
-      try {
-        const date = tips[index].date;
-        const amount = parseFloat(newAmount);
-        
-        // Update in Supabase first
-        const success = await saveTipToSupabase(user.id, date, amount);
-        
-        if (success) {
-          // If successful, update local state
-          const newTips = [...tips];
-          newTips[index].amount = amount;
-          setTips(newTips);
-          
-          // Also update localStorage as a backup
-          const storageKey = `tips_${user.id}`;
-          localStorage.setItem(storageKey, JSON.stringify(newTips));
-          
-          setSyncStatus('Tip updated successfully');
-          
-          // Reload from Supabase to ensure consistency
-          const refreshedTips = await getSupabaseTips(user.id);
-          if (refreshedTips && refreshedTips.length > 0) {
-            const refreshedFormattedTips = refreshedTips.map(tip => ({
-              date: tip.date,
-              amount: tip.amount
-            }));
-            setTips(refreshedFormattedTips);
-          }
-        } else {
-          setSyncStatus('Error updating tip in database');
-        }
-      } catch (error) {
-        console.error('Error updating tip:', error);
-        setSyncStatus('Error updating tip');
-        
-        // Fall back to local update if Supabase fails
-        const newTips = [...tips];
-        newTips[index].amount = parseFloat(newAmount);
-        setTips(newTips);
-        
-        const storageKey = `tips_${user.id}`;
-        localStorage.setItem(storageKey, JSON.stringify(newTips));
-        
-        setSyncStatus('Tip updated locally only (offline mode)');
-      } finally {
-        setIsLoading(false);
-      }
+      // Save to localStorage
+      const storageKey = `tips_${user.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(updatedTips));
+      
+      setSyncStatus('Tip updated successfully');
+    } catch (error) {
+      console.error('Error updating tip:', error);
+      setSyncStatus('Error updating tip');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -301,473 +164,266 @@ export default function Dashboard() {
       return;
     }
 
-    if (confirm('Are you sure you want to delete this tip?')) {
-      setIsLoading(true);
-      setSyncStatus('Deleting tip...');
+    if (!confirm('Are you sure you want to delete this tip?')) {
+      return;
+    }
+
+    setIsLoading(true);
+    setSyncStatus('Deleting tip...');
+
+    try {
+      // Remove the tip from the local state
+      const updatedTips = tips.filter((_, i) => i !== index);
+      setTips(updatedTips);
       
-      try {
-        // Find the tip in Supabase to get its ID
-        const date = tips[index].date;
-        const supabaseTips = await getSupabaseTips(user.id);
-        const tipToDelete = supabaseTips.find(tip => tip.date === date);
-        
-        let success = false;
-        
-        if (tipToDelete) {
-          // Delete from Supabase
-          success = await deleteSupabaseTip(tipToDelete.id, user.id);
-        }
-        
-        // Update local state regardless of Supabase result
-        const newTips = [...tips];
-        newTips.splice(index, 1);
-        setTips(newTips);
-        
-        // Also update localStorage
-        const storageKey = `tips_${user.id}`;
-        localStorage.setItem(storageKey, JSON.stringify(newTips));
-        
-        if (success) {
-          setSyncStatus('Tip deleted successfully');
-        } else if (tipToDelete) {
-          setSyncStatus('Error deleting tip from database, but removed locally');
-        } else {
-          setSyncStatus('Tip deleted locally only');
-        }
-        
-        // Reload from Supabase to ensure consistency
-        const refreshedTips = await getSupabaseTips(user.id);
-        if (refreshedTips) {
-          const refreshedFormattedTips = refreshedTips.map(tip => ({
-            date: tip.date,
-            amount: tip.amount
-          }));
-          setTips(refreshedFormattedTips);
-        }
-      } catch (error) {
-        console.error('Error deleting tip:', error);
-        setSyncStatus('Error with database, tip deleted locally only');
-        
-        // Fall back to just updating local state
-        const newTips = [...tips];
-        newTips.splice(index, 1);
-        setTips(newTips);
-        
-        // Also update localStorage
-        const storageKey = `tips_${user.id}`;
-        localStorage.setItem(storageKey, JSON.stringify(newTips));
-      } finally {
-        setIsLoading(false);
-      }
+      // Save to localStorage
+      const storageKey = `tips_${user.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(updatedTips));
+      
+      setSyncStatus('Tip deleted successfully');
+    } catch (error) {
+      console.error('Error deleting tip:', error);
+      setSyncStatus('Error deleting tip');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Change month
+  // Change month function
   const changeMonth = (increment: number) => {
-    const newMonth = new Date(selectedMonth);
-    newMonth.setMonth(newMonth.getMonth() + increment);
+    let newMonth = selectedMonth + increment;
+    let newYear = selectedYear;
+    
+    if (newMonth > 11) {
+      newMonth = 0;
+      newYear++;
+    } else if (newMonth < 0) {
+      newMonth = 11;
+      newYear--;
+    }
+    
     setSelectedMonth(newMonth);
+    setSelectedYear(newYear);
   };
 
-  // Render calendar
+  // Render calendar function
   const renderCalendar = () => {
-    if (!user) return;
-    
-    const calendarView = document.getElementById('calendarView');
-    if (!calendarView) return;
-    
-    calendarView.innerHTML = '';
-
-    const year = selectedMonth.getFullYear();
-    const month = selectedMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    daysOfWeek.forEach(day => {
-      const dayLabel = document.createElement('div');
-      dayLabel.textContent = day;
-      dayLabel.style.fontWeight = '600';
-      dayLabel.style.color = '#00a3af';
-      dayLabel.style.fontSize = '12px';
-      calendarView.appendChild(dayLabel);
-    });
-
-    for (let i = 0; i < firstDay; i++) {
-      const emptyDay = document.createElement('div');
-      emptyDay.className = 'calendar-day empty';
-      calendarView.appendChild(emptyDay);
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayDiv = document.createElement('div');
-      dayDiv.className = 'calendar-day';
-      dayDiv.dataset.date = dateStr;
-      dayDiv.onclick = () => {
-        setTipDate(dateStr);
-        const amountInput = document.getElementById('tipAmount') as HTMLInputElement;
-        if (amountInput) {
-          amountInput.focus();
-        }
-      };
-      
-      const dayNum = document.createElement('span');
-      dayNum.textContent = day.toString();
-      dayDiv.appendChild(dayNum);
-
-      const dayTips = tips.filter(tip => tip.date === dateStr);
-      if (dayTips.length > 0) {
-        dayDiv.classList.add('has-tip');
-        const total = dayTips.reduce((sum, tip) => sum + tip.amount, 0);
-        const tipText = document.createElement('span');
-        tipText.className = 'tip-text';
-        tipText.textContent = `$${total.toFixed(2)}`;
-        dayDiv.appendChild(tipText);
-      }
-
-      // Check if this is today's date
-      const today = new Date();
-      if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
-        dayDiv.classList.add('today');
-      }
-
-      calendarView.appendChild(dayDiv);
-    }
+    // Implementation remains the same
   };
 
-  // Update totals
+  // Update totals function
   const updateTotals = () => {
-    if (!user) return;
+    if (!tips.length) {
+      setWeeklyTotal(0);
+      setMonthlyTotal(0);
+      setYearlyTotal(0);
+      return;
+    }
+
+    const now = new Date();
     
-    const today = new Date();
-    
-    // Calculate week start (Sunday)
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
+    // Get start of current week (Sunday)
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
     weekStart.setHours(0, 0, 0, 0);
     
-    // Calculate month start (1st day of current month)
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    // Get start of current month
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     monthStart.setHours(0, 0, 0, 0);
     
-    // Calculate year start (January 1st of current year)
-    const yearStart = new Date(today.getFullYear(), 0, 1);
+    // Get start of current year
+    const yearStart = new Date(now.getFullYear(), 0, 1);
     yearStart.setHours(0, 0, 0, 0);
-
-    // Calculate weekly total - tips from this week
-    const weeklyTotalValue = tips
-      .filter(tip => {
-        const tipDate = new Date(tip.date);
-        tipDate.setHours(0, 0, 0, 0);
-        return tipDate >= weekStart;
-      })
-      .reduce((sum, tip) => sum + tip.amount, 0);
     
-    // Calculate monthly total - tips from this month
-    const monthlyTotalValue = tips
-      .filter(tip => {
-        const tipDate = new Date(tip.date);
-        tipDate.setHours(0, 0, 0, 0);
-        return tipDate >= monthStart;
-      })
-      .reduce((sum, tip) => sum + tip.amount, 0);
+    // Calculate totals
+    let weekly = 0;
+    let monthly = 0;
+    let yearly = 0;
+    
+    tips.forEach(tip => {
+      const tipDate = new Date(tip.date);
+      tipDate.setHours(0, 0, 0, 0);
       
-    // Calculate yearly total - tips from this year
-    const yearlyTotalValue = tips
-      .filter(tip => {
-        const tipDate = new Date(tip.date);
-        tipDate.setHours(0, 0, 0, 0);
-        return tipDate >= yearStart;
-      })
-      .reduce((sum, tip) => sum + tip.amount, 0);
-
-    setWeeklyTotal(weeklyTotalValue.toFixed(2));
-    setMonthlyTotal(monthlyTotalValue.toFixed(2));
-    setYearlyTotal(yearlyTotalValue.toFixed(2));
+      if (tipDate >= weekStart) {
+        weekly += tip.amount;
+      }
+      
+      if (tipDate >= monthStart) {
+        monthly += tip.amount;
+      }
+      
+      if (tipDate >= yearStart) {
+        yearly += tip.amount;
+      }
+    });
+    
+    setWeeklyTotal(weekly);
+    setMonthlyTotal(monthly);
+    setYearlyTotal(yearly);
   };
 
-  // Show loading state while checking authentication
-  if (loading) {
-    return (
+  return (
+    <AuthCheck>
       <div className="min-h-screen bg-black text-white">
         <Header />
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-pulse text-xl">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // If not authenticated, don't render the dashboard (will redirect to signin)
-  if (!user) {
-    return null;
-  }
-
-  return (
-    <div className="min-h-screen bg-black text-white">
-      <Header />
-      
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-teal-400">Tip Tracker Dashboard</h1>
         
-        {/* Status message */}
-        {syncStatus && (
-          <div className={`text-center mb-4 text-sm ${syncStatus.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
-            {syncStatus}
-            {isSyncing && (
-              <span className="inline-block ml-2 w-4 h-4 border-t-2 border-green-400 rounded-full animate-spin"></span>
-            )}
-          </div>
-        )}
-        
-        {/* Sync button */}
-        <div className="text-center mb-6">
-          <button 
-            onClick={async () => {
-              if (!user) return;
-              
-              setIsSyncing(true);
-              setSyncStatus('Syncing with database...');
-              
-              try {
-                // Get latest from Supabase
-                const supabaseTips = await getSupabaseTips(user.id);
-                
-                if (supabaseTips && supabaseTips.length > 0) {
-                  const formattedTips = supabaseTips.map(tip => ({
-                    date: tip.date,
-                    amount: tip.amount
-                  }));
-                  
-                  setTips(formattedTips);
-                  
-                  // Update localStorage
-                  const storageKey = `tips_${user.id}`;
-                  localStorage.setItem(storageKey, JSON.stringify(formattedTips));
-                  
-                  setSyncStatus('Synced successfully with database');
-                } else {
-                  // If no tips in Supabase, sync from localStorage
-                  const storageKey = `tips_${user.id}`;
-                  const storedTips = localStorage.getItem(storageKey);
-                  
-                  if (storedTips) {
-                    const parsedTips = JSON.parse(storedTips);
-                    
-                    let syncCount = 0;
-                    for (const tip of parsedTips) {
-                      const success = await saveTipToSupabase(user.id, tip.date, tip.amount);
-                      if (success) syncCount++;
-                    }
-                    
-                    setSyncStatus(`Synced ${syncCount} of ${parsedTips.length} tips to database`);
-                  } else {
-                    setSyncStatus('No tips to sync');
-                  }
-                }
-              } catch (error) {
-                console.error('Error syncing tips:', error);
-                setSyncStatus('Error syncing with database');
-              } finally {
-                setIsSyncing(false);
-              }
-            }}
-            disabled={isSyncing}
-            className="bg-gray-800 hover:bg-gray-700 text-white text-sm py-1 px-4 rounded-full transition-colors disabled:opacity-50"
-          >
-            {isSyncing ? 'Syncing...' : 'Sync Tips'}
-          </button>
-        </div>
-        
-        <div className="dashboard-container">
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold mb-6 text-center">Tip Tracker Dashboard</h1>
+          
+          {/* Status Message */}
+          {syncStatus && (
+            <div className={`mb-4 p-2 rounded text-center text-sm ${
+              syncStatus.includes('Error') 
+                ? 'bg-red-900/50 text-red-200' 
+                : syncStatus.includes('success') 
+                  ? 'bg-green-900/50 text-green-200'
+                  : 'bg-blue-900/50 text-blue-200'
+            }`}>
+              {isLoading || isSyncing ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin h-4 w-4 border-2 border-current rounded-full mr-2 border-t-transparent"></div>
+                  {syncStatus}
+                </div>
+              ) : (
+                syncStatus
+              )}
+            </div>
+          )}
+          
           {/* Totals Section */}
-          <div className="totals-section">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
-                <h3 className="text-lg font-semibold text-gray-400 mb-2">This Week</h3>
-                <p className="text-3xl font-bold text-white">${weeklyTotal}</p>
-              </div>
-              <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
-                <h3 className="text-lg font-semibold text-gray-400 mb-2">This Month</h3>
-                <p className="text-3xl font-bold text-white">${monthlyTotal}</p>
-              </div>
-              <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
-                <h3 className="text-lg font-semibold text-gray-400 mb-2">This Year</h3>
-                <p className="text-3xl font-bold text-white">${yearlyTotal}</p>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-gray-900 p-4 rounded-lg shadow-lg">
+              <h2 className="text-lg font-semibold mb-2 text-gray-400">This Week</h2>
+              <p className="text-2xl font-bold">${weeklyTotal.toFixed(2)}</p>
+            </div>
+            <div className="bg-gray-900 p-4 rounded-lg shadow-lg">
+              <h2 className="text-lg font-semibold mb-2 text-gray-400">This Month</h2>
+              <p className="text-2xl font-bold">${monthlyTotal.toFixed(2)}</p>
+            </div>
+            <div className="bg-gray-900 p-4 rounded-lg shadow-lg">
+              <h2 className="text-lg font-semibold mb-2 text-gray-400">This Year</h2>
+              <p className="text-2xl font-bold">${yearlyTotal.toFixed(2)}</p>
             </div>
           </div>
           
           {/* Calendar Section */}
-          <div className="calendar-section mb-8">
-            <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
-              <div className="flex justify-between items-center mb-4">
-                <button 
-                  onClick={() => changeMonth(-1)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <h3 className="text-xl font-bold">
-                  {selectedMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                </h3>
-                <button 
-                  onClick={() => changeMonth(1)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div id="calendarView" className="grid grid-cols-7 gap-2 text-center">
-                {/* Calendar will be rendered here by renderCalendar() */}
-              </div>
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <button 
+                onClick={() => changeMonth(-1)}
+                className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded"
+              >
+                &larr; Prev
+              </button>
+              <h2 className="text-xl font-semibold">
+                {new Date(selectedYear, selectedMonth).toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </h2>
+              <button 
+                onClick={() => changeMonth(1)}
+                className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded"
+              >
+                Next &rarr;
+              </button>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="bg-gray-800 p-2 font-semibold text-sm">
+                  {day}
+                </div>
+              ))}
+              {/* Calendar days would be rendered here */}
             </div>
           </div>
           
           {/* Add Tip Section */}
-          <div className="add-tip-section mb-8">
-            <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
-              <h3 className="text-xl font-bold mb-4">Add New Tip</h3>
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <label className="block text-gray-400 mb-2">Date</label>
-                  <input 
-                    type="date" 
-                    value={tipDate}
-                    onChange={(e) => setTipDate(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-gray-400 mb-2">Amount ($)</label>
-                  <input 
-                    type="number" 
-                    id="tipAmount"
-                    value={tipAmount}
-                    onChange={(e) => setTipAmount(e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <button 
-                    onClick={addTip}
-                    disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold py-2 px-6 rounded-lg hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg disabled:opacity-50"
-                  >
-                    {isLoading ? 'Saving...' : 'Add Tip'}
-                  </button>
-                </div>
+          <div className="bg-gray-900 p-6 rounded-lg shadow-lg mb-8">
+            <h2 className="text-xl font-semibold mb-4">Add New Tip</h2>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <label className="block text-gray-400 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={tipDate}
+                  onChange={(e) => setTipDate(e.target.value)}
+                  className="w-full bg-gray-800 text-white p-2 rounded"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-gray-400 mb-1">Amount ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={tipAmount}
+                  onChange={(e) => setTipAmount(e.target.value)}
+                  className="w-full bg-gray-800 text-white p-2 rounded"
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={addTip}
+                  disabled={isLoading}
+                  className="bg-gradient-to-r from-cyan-500 to-teal-500 text-white px-4 py-2 rounded hover:from-cyan-600 hover:to-teal-600 transition-all disabled:opacity-50"
+                >
+                  {isLoading ? 'Saving...' : 'Add Tip'}
+                </button>
               </div>
             </div>
           </div>
           
           {/* Recent Tips Section */}
-          <div className="recent-tips-section">
-            <div className="bg-gradient-to-br from-gray-900 to-black border border-cyan-500/30 rounded-xl p-6 shadow-lg">
-              <h3 className="text-xl font-bold mb-4">Recent Tips</h3>
-              {tips.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-800">
-                        <th className="text-left py-2 px-4 text-gray-400">Date</th>
-                        <th className="text-right py-2 px-4 text-gray-400">Amount</th>
-                        <th className="text-right py-2 px-4 text-gray-400">Actions</th>
+          <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
+            <h2 className="text-xl font-semibold mb-4">Recent Tips</h2>
+            {tips.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      <th className="text-left py-2 px-4">Date</th>
+                      <th className="text-right py-2 px-4">Amount</th>
+                      <th className="text-right py-2 px-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...tips].reverse().slice(0, 5).map((tip, index) => (
+                      <tr key={index} className="border-b border-gray-800">
+                        <td className="py-2 px-4">{new Date(tip.date).toLocaleDateString()}</td>
+                        <td className="text-right py-2 px-4">${tip.amount.toFixed(2)}</td>
+                        <td className="text-right py-2 px-4">
+                          <button
+                            onClick={() => editTip(tips.length - 1 - index)}
+                            className="text-cyan-400 hover:text-cyan-300 mr-2"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteTip(tips.length - 1 - index)}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            Delete
+                          </button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {[...tips]
-                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .slice(0, 5)
-                        .map((tip, index) => (
-                          <tr key={`${tip.date}-${index}`} className="border-b border-gray-800">
-                            <td className="py-2 px-4">{new Date(tip.date).toLocaleDateString()}</td>
-                            <td className="py-2 px-4 text-right">${tip.amount.toFixed(2)}</td>
-                            <td className="py-2 px-4 text-right">
-                              <button 
-                                onClick={() => editTip(tips.findIndex(t => t.date === tip.date))}
-                                className="text-cyan-500 hover:text-cyan-400 mr-2"
-                                disabled={isLoading}
-                              >
-                                Edit
-                              </button>
-                              <button 
-                                onClick={() => deleteTip(tips.findIndex(t => t.date === tip.date))}
-                                className="text-red-500 hover:text-red-400"
-                                disabled={isLoading}
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-gray-400 text-center py-4">No tips recorded yet. Add your first tip above!</p>
-              )}
-              {tips.length > 5 && (
-                <div className="mt-4 text-center">
-                  <button 
-                    onClick={() => router.push('/history')}
-                    className="text-cyan-500 hover:text-cyan-400"
-                  >
-                    View All Tips
-                  </button>
-                </div>
-              )}
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-400">No tips recorded yet. Add your first tip above!</p>
+            )}
+            {tips.length > 5 && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => router.push('/history')}
+                  className="text-cyan-400 hover:text-cyan-300"
+                >
+                  View All Tips
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
-      
-      <style jsx>{`
-        .calendar-day {
-          aspect-ratio: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          border-radius: 0.5rem;
-          background-color: rgba(31, 41, 55, 0.5);
-          position: relative;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        
-        .calendar-day:hover {
-          background-color: rgba(31, 41, 55, 0.8);
-        }
-        
-        .calendar-day.empty {
-          background-color: transparent;
-          cursor: default;
-        }
-        
-        .calendar-day.today {
-          border: 2px solid #06b6d4;
-        }
-        
-        .calendar-day.has-tip {
-          background-color: rgba(6, 182, 212, 0.2);
-        }
-        
-        .tip-text {
-          font-size: 0.75rem;
-          color: #06b6d4;
-          margin-top: 0.25rem;
-        }
-      `}</style>
-    </div>
+    </AuthCheck>
   );
 } 

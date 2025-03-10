@@ -20,17 +20,14 @@ const AuthCheck: React.FC<AuthCheckProps> = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
+      <div className="min-h-screen bg-black text-white flex justify-center items-center">
+        <div className="animate-pulse text-xl">Loading...</div>
       </div>
     );
   }
 
   if (!user) {
-    return null; // Will redirect in the useEffect
+    return null; // Will redirect to signin
   }
 
   return <>{children}</>;

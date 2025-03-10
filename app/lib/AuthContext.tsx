@@ -1,14 +1,36 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, getUserSubscriptionStatus, getUserPremiumStatus } from './supabase';
 import { useRouter } from 'next/navigation';
-import * as userService from './userService';
+
+// Define user type
+export interface User {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
+// Define enhanced user type
+export interface EnhancedUser {
+  id: string;
+  email: string;
+  name?: string;
+  avatar_url?: string;
+  created_at: string;
+}
+
+// Define user settings type
+export interface UserSettings {
+  id: string;
+  user_id: string;
+  theme: string;
+  notifications_enabled: boolean;
+}
 
 type AuthContextType = {
   user: User | null;
-  enhancedUser: userService.EnhancedUser | null;
-  userSettings: userService.UserSettings | null;
+  enhancedUser: EnhancedUser | null;
+  userSettings: UserSettings | null;
   isPaid: boolean;
   premiumStatus: {
     planType: string;
@@ -21,8 +43,8 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   devMode: boolean;
   toggleDevMode: () => void;
-  updateProfile: (profileData: Partial<userService.EnhancedUser>) => Promise<boolean>;
-  updateSettings: (settingsData: Partial<userService.UserSettings>) => Promise<boolean>;
+  updateProfile: (profileData: Partial<EnhancedUser>) => Promise<boolean>;
+  updateSettings: (settingsData: Partial<UserSettings>) => Promise<boolean>;
   refreshPremiumStatus: () => Promise<void>;
 };
 
@@ -49,8 +71,8 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [enhancedUser, setEnhancedUser] = useState<userService.EnhancedUser | null>(null);
-  const [userSettings, setUserSettings] = useState<userService.UserSettings | null>(null);
+  const [enhancedUser, setEnhancedUser] = useState<EnhancedUser | null>(null);
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [isPaid, setIsPaid] = useState<boolean>(false);
   const [premiumStatus, setPremiumStatus] = useState<{
     planType: string;
@@ -65,79 +87,91 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [devMode, setDevMode] = useState<boolean>(false);
   const router = useRouter();
 
-  // Function to refresh premium status
+  // Function to refresh premium status (simplified)
   const refreshPremiumStatus = async () => {
     if (!user) return;
     
-    try {
-      // Check if user is on paid tier
-      const isPaidUser = await getUserSubscriptionStatus(user.id);
-      setIsPaid(isPaidUser);
-      
-      // Get detailed premium status
-      const premiumStatusData = await getUserPremiumStatus(user.id);
-      setPremiumStatus({
-        planType: premiumStatusData.planType,
-        premiumFeaturesEnabled: premiumStatusData.premiumFeaturesEnabled,
-        subscriptionStatus: premiumStatusData.subscriptionStatus
-      });
-    } catch (error) {
-      console.error('Error refreshing premium status:', error);
+    // In this simplified version, we'll just use localStorage to check premium status
+    const storedPremiumStatus = localStorage.getItem(`premium_status_${user.id}`);
+    if (storedPremiumStatus) {
+      try {
+        const parsedStatus = JSON.parse(storedPremiumStatus);
+        setPremiumStatus(parsedStatus);
+        setIsPaid(parsedStatus.premiumFeaturesEnabled);
+      } catch (error) {
+        console.error('Error parsing premium status:', error);
+      }
     }
   };
 
-  // Load enhanced user data
+  // Load enhanced user data from localStorage
   const loadEnhancedUserData = async (userId: string) => {
     try {
-      // Get enhanced user data
-      const enhancedUserData = await userService.getUser(userId);
-      if (enhancedUserData) {
-        setEnhancedUser(enhancedUserData);
+      // Get enhanced user data from localStorage
+      const storedUserData = localStorage.getItem(`user_${userId}`);
+      if (storedUserData) {
+        const parsedUserData = JSON.parse(storedUserData);
+        setEnhancedUser(parsedUserData);
+      } else {
+        // Create default enhanced user if not found
+        const defaultEnhancedUser: EnhancedUser = {
+          id: userId,
+          email: user?.email || '',
+          created_at: new Date().toISOString()
+        };
+        setEnhancedUser(defaultEnhancedUser);
+        localStorage.setItem(`user_${userId}`, JSON.stringify(defaultEnhancedUser));
       }
       
-      // Get user settings
-      const settings = await userService.getUserSettings(userId);
-      if (settings) {
-        setUserSettings(settings);
+      // Get user settings from localStorage
+      const storedSettings = localStorage.getItem(`settings_${userId}`);
+      if (storedSettings) {
+        const parsedSettings = JSON.parse(storedSettings);
+        setUserSettings(parsedSettings);
+      } else {
+        // Create default settings if not found
+        const defaultSettings: UserSettings = {
+          id: `settings_${userId}`,
+          user_id: userId,
+          theme: 'dark',
+          notifications_enabled: true
+        };
+        setUserSettings(defaultSettings);
+        localStorage.setItem(`settings_${userId}`, JSON.stringify(defaultSettings));
       }
       
       // Check premium status
       await refreshPremiumStatus();
       
       // Update last login
-      await userService.updateUserLastLogin(userId);
+      const now = new Date().toISOString();
+      localStorage.setItem(`last_login_${userId}`, now);
       
-      // Log login activity
-      await userService.logUserActivity(userId, 'login', {
+      // Log login activity (simplified)
+      const activities = JSON.parse(localStorage.getItem(`activities_${userId}`) || '[]');
+      activities.push({
+        type: 'login',
         method: 'session',
-        timestamp: new Date().toISOString()
+        timestamp: now
       });
+      localStorage.setItem(`activities_${userId}`, JSON.stringify(activities));
     } catch (err) {
       console.error('Error loading enhanced user data:', err);
     }
   };
 
   useEffect(() => {
-    // Check if user is already authenticated
+    // Check if user is already authenticated using localStorage
     const checkUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const storedUser = localStorage.getItem('auth_user');
         
-        if (session?.user) {
-          const { id, email } = session.user;
-          setUser({ 
-            id, 
-            email: email || '', 
-            is_paid: false, 
-            created_at: new Date().toISOString() 
-          });
-          
-          // Check if user is on paid tier
-          const isPaidUser = await getUserSubscriptionStatus(id);
-          setIsPaid(isPaidUser);
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
           
           // Load enhanced user data
-          await loadEnhancedUserData(id);
+          await loadEnhancedUserData(parsedUser.id);
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
@@ -147,80 +181,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkUser();
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          const { id, email } = session.user;
-          setUser({ 
-            id, 
-            email: email || '', 
-            is_paid: false, 
-            created_at: new Date().toISOString() 
-          });
-          
-          // Check if user exists in our users table
-          const { data: existingUser } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', id)
-            .single();
-            
-          if (!existingUser) {
-            // Create user record if it doesn't exist
-            const { error: insertError } = await supabase
-              .from('users')
-              .insert([{ id, email: email || '', is_paid: false }]);
-              
-            if (insertError) {
-              console.error('Error creating user record:', insertError);
-            }
-          }
-          
-          // Check if user is on paid tier
-          const isPaidUser = await getUserSubscriptionStatus(id);
-          setIsPaid(isPaidUser);
-          
-          // Load enhanced user data
-          await loadEnhancedUserData(id);
-          
-          // Redirect to dashboard on successful sign-in
-          router.push('/dashboard');
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setEnhancedUser(null);
-          setUserSettings(null);
-          setIsPaid(false);
-          router.push('/');
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [router]);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      // In a real app, you would validate against a server
+      // For this simplified version, we'll check against localStorage
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = users.find((u: any) => u.email === email && u.password === password);
       
-      if (error) {
-        console.error('Sign in error:', error);
-        return { error, success: false };
+      if (!user) {
+        return { error: { message: 'Invalid email or password' }, success: false };
       }
+      
+      // Create user object without password
+      const { password: _, ...userWithoutPassword } = user;
+      
+      // Store user in localStorage
+      localStorage.setItem('auth_user', JSON.stringify(userWithoutPassword));
+      
+      // Update state
+      setUser(userWithoutPassword);
+      
+      // Load enhanced user data
+      await loadEnhancedUserData(userWithoutPassword.id);
       
       // Log sign in activity
-      if (data.user) {
-        await userService.logUserActivity(data.user.id, 'sign_in', {
-          method: 'password',
-          timestamp: new Date().toISOString()
-        });
-      }
+      const activities = JSON.parse(localStorage.getItem(`activities_${userWithoutPassword.id}`) || '[]');
+      activities.push({
+        type: 'sign_in',
+        method: 'password',
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem(`activities_${userWithoutPassword.id}`, JSON.stringify(activities));
       
       return { error: null, success: true };
     } catch (error) {
@@ -231,38 +224,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string) => {
     try {
-      // Get the site URL from environment or use the current origin
-      const siteUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
+      // Check if email already exists
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const existingUser = users.find((u: any) => u.email === email);
       
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: {
-          emailRedirectTo: `${siteUrl}/dashboard`
-        }
-      });
-      
-      if (error) {
-        console.error('Sign up error:', error);
-        return { error, success: false };
+      if (existingUser) {
+        return { error: { message: 'Email already in use' }, success: false };
       }
       
-      // If email confirmation is not required, create user record immediately
-      if (data.user && !data.session) {
-        console.log('Email confirmation required. Please check your email.');
-        return { 
-          error: { message: 'Please check your email to confirm your account.' }, 
-          success: true 
-        };
-      }
+      // Create new user
+      const newUser = {
+        id: `user_${Date.now()}`,
+        email,
+        password, // In a real app, you would hash this
+        created_at: new Date().toISOString()
+      };
       
-      // Log sign up activity
-      if (data.user) {
-        await userService.logUserActivity(data.user.id, 'sign_up', {
-          method: 'email',
-          timestamp: new Date().toISOString()
-        });
-      }
+      // Add to users array
+      users.push(newUser);
+      localStorage.setItem('users', JSON.stringify(users));
+      
+      // Create user object without password
+      const { password: _, ...userWithoutPassword } = newUser;
+      
+      // Store user in localStorage
+      localStorage.setItem('auth_user', JSON.stringify(userWithoutPassword));
+      
+      // Update state
+      setUser(userWithoutPassword);
+      
+      // Create enhanced user
+      const enhancedUser: EnhancedUser = {
+        id: userWithoutPassword.id,
+        email: userWithoutPassword.email,
+        created_at: userWithoutPassword.created_at
+      };
+      localStorage.setItem(`user_${userWithoutPassword.id}`, JSON.stringify(enhancedUser));
+      setEnhancedUser(enhancedUser);
+      
+      // Create default settings
+      const defaultSettings: UserSettings = {
+        id: `settings_${userWithoutPassword.id}`,
+        user_id: userWithoutPassword.id,
+        theme: 'dark',
+        notifications_enabled: true
+      };
+      localStorage.setItem(`settings_${userWithoutPassword.id}`, JSON.stringify(defaultSettings));
+      setUserSettings(defaultSettings);
       
       return { error: null, success: true };
     } catch (error) {
@@ -272,84 +280,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    try {
-      // Log sign out activity before signing out
-      if (user) {
-        await userService.logUserActivity(user.id, 'sign_out', {
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      await supabase.auth.signOut();
-      setUser(null);
-      setEnhancedUser(null);
-      setUserSettings(null);
-      setIsPaid(false);
-      router.push('/');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
+    // Remove user from localStorage
+    localStorage.removeItem('auth_user');
+    
+    // Update state
+    setUser(null);
+    setEnhancedUser(null);
+    setUserSettings(null);
+    setIsPaid(false);
+    
+    // Redirect to home
+    router.push('/');
   };
 
   const toggleDevMode = () => {
-    const newDevMode = !devMode;
-    setDevMode(newDevMode);
-    console.log(`Development mode ${newDevMode ? 'enabled' : 'disabled'}`);
-    if (newDevMode) {
-      setIsPaid(true);
-    } else {
-      if (user) {
-        getUserSubscriptionStatus(user.id).then(status => {
-          setIsPaid(status);
-        });
-      } else {
-        setIsPaid(false);
-      }
+    setDevMode(!devMode);
+    localStorage.setItem('dev_mode', (!devMode).toString());
+  };
+
+  const updateProfile = async (profileData: Partial<EnhancedUser>) => {
+    if (!user) return false;
+    
+    try {
+      // Get current enhanced user
+      const currentUser = enhancedUser || {
+        id: user.id,
+        email: user.email,
+        created_at: user.created_at
+      };
+      
+      // Update with new data
+      const updatedUser = { ...currentUser, ...profileData };
+      
+      // Save to localStorage
+      localStorage.setItem(`user_${user.id}`, JSON.stringify(updatedUser));
+      
+      // Update state
+      setEnhancedUser(updatedUser);
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      return false;
     }
   };
 
-  const updateProfile = async (profileData: Partial<userService.EnhancedUser>) => {
-    if (!user) return false;
+  const updateSettings = async (settingsData: Partial<UserSettings>) => {
+    if (!user || !userSettings) return false;
     
-    const success = await userService.updateUserProfile(user.id, profileData);
-    
-    if (success) {
-      // Refresh enhanced user data
-      const updatedUser = await userService.getUser(user.id);
-      if (updatedUser) {
-        setEnhancedUser(updatedUser);
-      }
+    try {
+      // Update with new data
+      const updatedSettings = { ...userSettings, ...settingsData };
       
-      // Log profile update activity
-      await userService.logUserActivity(user.id, 'profile_update', {
-        fields_updated: Object.keys(profileData),
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    return success;
-  };
-
-  const updateSettings = async (settingsData: Partial<userService.UserSettings>) => {
-    if (!user) return false;
-    
-    const success = await userService.updateUserSettings(user.id, settingsData);
-    
-    if (success) {
-      // Refresh user settings
-      const updatedSettings = await userService.getUserSettings(user.id);
-      if (updatedSettings) {
-        setUserSettings(updatedSettings);
-      }
+      // Save to localStorage
+      localStorage.setItem(`settings_${user.id}`, JSON.stringify(updatedSettings));
       
-      // Log settings update activity
-      await userService.logUserActivity(user.id, 'settings_update', {
-        fields_updated: Object.keys(settingsData),
-        timestamp: new Date().toISOString()
-      });
+      // Update state
+      setUserSettings(updatedSettings);
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      return false;
     }
-    
-    return success;
   };
 
   return (
