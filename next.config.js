@@ -3,7 +3,6 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ['bggsscexogsptcnnwckj.supabase.co'],
     unoptimized: true,
   },
   // Use static export for Netlify
