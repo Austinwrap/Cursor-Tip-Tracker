@@ -1,142 +1,205 @@
-import React, { useEffect, useState } from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../lib/AuthContext';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  BarElement,
+  PointElement,
+  LineElement,
   Title,
   Tooltip,
   Legend,
+  BarElement,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-import { useAuth } from '../../lib/AuthContext';
-import { getMonthlyTotals } from '../../lib/supabase';
-import { formatCurrency } from '../../lib/dateUtils';
 
 // Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  PointElement,
+  LineElement,
   BarElement,
   Title,
   Tooltip,
   Legend
 );
 
-const MonthlyChart: React.FC = () => {
-  const [monthlyData, setMonthlyData] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface Tip {
+  date: string;
+  amount: number;
+}
+
+export default function MonthlyChart() {
   const { user } = useAuth();
-  
-  // Get current year
-  const currentYear = new Date().getFullYear();
+  const [tips, setTips] = useState<Tip[]>([]);
+  const [chartData, setChartData] = useState<any>({
+    labels: [],
+    datasets: [],
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    const fetchMonthlyData = async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      setError(null);
-      
+    if (!user) return;
+
+    // Load tips from localStorage
+    const loadTips = () => {
+      setIsLoading(true);
       try {
-        const data = await getMonthlyTotals(user.id, currentYear);
-        setMonthlyData(data);
-      } catch (err) {
-        console.error('Error fetching monthly data:', err);
-        setError('Failed to load monthly data');
+        const storageKey = `tips_${user.id}`;
+        const storedTips = localStorage.getItem(storageKey);
+        
+        if (storedTips) {
+          const parsedTips = JSON.parse(storedTips);
+          setTips(parsedTips);
+          processChartData(parsedTips);
+        } else {
+          setTips([]);
+          setChartData({
+            labels: [],
+            datasets: [],
+          });
+        }
+      } catch (error) {
+        console.error('Error loading tips:', error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    fetchMonthlyData();
-  }, [user, currentYear]);
+    loadTips();
+  }, [user, year]);
 
-  if (loading) {
-    return <div className="text-center py-4">Loading monthly chart...</div>;
-  }
+  const processChartData = (tipsData: Tip[]) => {
+    if (!tipsData.length) return;
 
-  if (error) {
-    return (
-      <div className="bg-red-900 border border-red-500 text-white p-3 rounded">
-        {error}
-      </div>
-    );
-  }
+    // Filter tips for the selected year
+    const yearTips = tipsData.filter(tip => {
+      const tipDate = new Date(tip.date);
+      return tipDate.getFullYear() === year;
+    });
 
-  // Prepare data for chart
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-  
-  const chartData = {
-    labels: monthNames,
-    datasets: [
-      {
-        label: 'Monthly Tips',
-        data: monthNames.map((_, index) => {
-          const monthKey = (index + 1).toString().padStart(2, '0');
-          return monthlyData[monthKey] ? monthlyData[monthKey] / 100 : 0; // Convert cents to dollars
-        }),
-        backgroundColor: 'rgba(255, 255, 255, 0.7)',
-        borderColor: 'rgba(255, 255, 255, 1)',
-        borderWidth: 1,
-      },
-    ],
+    // Group tips by month
+    const monthlyTotals = Array(12).fill(0);
+
+    yearTips.forEach(tip => {
+      const date = new Date(tip.date);
+      const month = date.getMonth();
+      monthlyTotals[month] += Number(tip.amount);
+    });
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    setChartData({
+      labels: monthNames,
+      datasets: [
+        {
+          label: `Monthly Tips for ${year}`,
+          data: monthlyTotals,
+          backgroundColor: 'rgba(54, 162, 235, 0.6)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+        },
+      ],
+    });
   };
 
-  const chartOptions = {
+  const changeYear = (increment: number) => {
+    setYear(prevYear => prevYear + increment);
+  };
+
+  const options = {
     responsive: true,
-    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: `Monthly Tips for ${year}`,
+        color: 'white',
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            return `$${context.raw.toFixed(2)}`;
+          }
+        }
+      }
+    },
     scales: {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: (value: number) => `$${value}`,
-          color: 'rgba(211, 211, 211, 0.8)',
+          callback: function(value: any) {
+            return '$' + value;
+          },
+          color: 'rgba(255, 255, 255, 0.7)',
         },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)',
-        },
+        }
       },
       x: {
         ticks: {
-          color: 'rgba(211, 211, 211, 0.8)',
+          color: 'rgba(255, 255, 255, 0.7)',
         },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)',
-        },
-      },
-    },
-    plugins: {
-      legend: {
-        labels: {
-          color: 'rgba(211, 211, 211, 0.8)',
-        },
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: any) => `Total: ${formatCurrency(context.raw * 100)}`,
-        },
-      },
+        }
+      }
     },
   };
 
-  // Calculate total for the year
-  const yearlyTotal = Object.values(monthlyData).reduce((sum, amount) => sum + amount, 0);
+  if (isLoading) {
+    return (
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8 animate-pulse">
+        <div className="h-64 flex items-center justify-center">
+          <p className="text-gray-400">Loading chart data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!tips.length) {
+    return (
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+        <div className="h-64 flex items-center justify-center">
+          <p className="text-gray-400">No tip data available for charts.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="card">
-      <h2 className="section-title">Monthly Tips for {currentYear}</h2>
-      <p className="mb-4">Yearly Total: {formatCurrency(yearlyTotal)}</p>
-      
-      <div className="h-80">
-        <Bar data={chartData} options={chartOptions as any} />
+    <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Monthly Overview</h2>
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={() => changeYear(-1)} 
+            className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
+          >
+            &larr;
+          </button>
+          <span>{year}</span>
+          <button 
+            onClick={() => changeYear(1)} 
+            className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
+          >
+            &rarr;
+          </button>
+        </div>
+      </div>
+      <div className="h-64">
+        <Bar options={options} data={chartData} />
       </div>
     </div>
   );
-};
-
-export default MonthlyChart; 
+} 
