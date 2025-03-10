@@ -1,276 +1,149 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../lib/AuthContext';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
-
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import { useAuth } from '@/app/lib/AuthContext';
 
 interface Tip {
+  id?: string;
+  user_id?: string;
   date: string;
   amount: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export default function Projections() {
   const { user } = useAuth();
-  const [tips, setTips] = useState<Tip[]>([]);
-  const [chartData, setChartData] = useState<any>({
-    labels: [],
-    datasets: [],
+  const [projections, setProjections] = useState({
+    daily: 0,
+    weekly: 0,
+    monthly: 0,
+    yearly: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [projectionPeriod, setProjectionPeriod] = useState<'month' | 'year'>('month');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
 
-    // Load tips from localStorage
-    const loadTips = () => {
+    const loadTips = async () => {
       setIsLoading(true);
+      setError(null);
+      
       try {
+        // Get tips from localStorage
         const storageKey = `tips_${user.id}`;
         const storedTips = localStorage.getItem(storageKey);
         
         if (storedTips) {
-          const parsedTips = JSON.parse(storedTips);
-          setTips(parsedTips);
-          processChartData(parsedTips);
+          const tips: Tip[] = JSON.parse(storedTips);
+          calculateProjections(tips);
         } else {
-          setTips([]);
-          setChartData({
-            labels: [],
-            datasets: [],
-          });
+          setError('No tips found');
         }
-      } catch (error) {
-        console.error('Error loading tips:', error);
+      } catch (err) {
+        console.error('Error loading tips:', err);
+        setError('Failed to load tips data');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadTips();
-  }, [user, projectionPeriod]);
+  }, [user]);
 
-  const processChartData = (tipsData: Tip[]) => {
-    if (!tipsData.length) return;
+  const calculateProjections = (tips: Tip[]) => {
+    if (!tips.length) {
+      setError('Not enough data to calculate projections');
+      return;
+    }
 
     // Sort tips by date
-    const sortedTips = [...tipsData].sort((a, b) => 
+    const sortedTips = [...tips].sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    // Get the date range
-    const startDate = new Date(sortedTips[0].date);
-    const endDate = new Date(sortedTips[sortedTips.length - 1].date);
+    // Get date range
+    const firstDate = new Date(sortedTips[0].date);
+    const lastDate = new Date(sortedTips[sortedTips.length - 1].date);
     
-    // Calculate average daily tip
-    const totalDays = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+    // Calculate total days in the dataset
+    const daysDiff = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)));
+    
+    // Calculate total amount
     const totalAmount = sortedTips.reduce((sum, tip) => sum + Number(tip.amount), 0);
-    const averageDailyTip = totalAmount / totalDays;
-
-    // Generate projection data
-    const today = new Date();
-    const labels = [];
-    const actualData = [];
-    const projectionData = [];
     
-    // Determine projection end date
-    let projectionEndDate = new Date(today);
-    if (projectionPeriod === 'month') {
-      projectionEndDate.setMonth(today.getMonth() + 1);
-    } else {
-      projectionEndDate.setFullYear(today.getFullYear() + 1);
-    }
+    // Calculate daily average
+    const dailyAverage = totalAmount / daysDiff;
     
-    // Create data points for each day
-    let currentDate = new Date(startDate);
-    while (currentDate <= projectionEndDate) {
-      const dateString = currentDate.toISOString().split('T')[0];
-      labels.push(dateString);
-      
-      // Find actual tip for this date if it exists
-      const tipForDate = sortedTips.find(tip => tip.date === dateString);
-      
-      if (currentDate <= today) {
-        // Actual data
-        actualData.push(tipForDate ? Number(tipForDate.amount) : 0);
-        projectionData.push(null);
-      } else {
-        // Projection data
-        actualData.push(null);
-        projectionData.push(averageDailyTip);
-      }
-      
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    // Calculate cumulative sums
-    let cumulativeActual = 0;
-    const cumulativeActualData = actualData.map(amount => 
-      amount !== null ? (cumulativeActual += amount) : null
-    );
-    
-    // Start projection from the last actual value
-    let lastActualValue = cumulativeActual;
-    const cumulativeProjectionData = projectionData.map(amount => {
-      if (amount !== null) {
-        lastActualValue += amount;
-        return lastActualValue;
-      }
-      return null;
-    });
-    
-    setChartData({
-      labels,
-      datasets: [
-        {
-          label: 'Actual Tips',
-          data: cumulativeActualData,
-          borderColor: 'rgba(75, 192, 192, 1)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          pointRadius: 0,
-          borderWidth: 2,
-          fill: true,
-        },
-        {
-          label: 'Projected Tips',
-          data: cumulativeProjectionData,
-          borderColor: 'rgba(255, 99, 132, 1)',
-          backgroundColor: 'rgba(255, 99, 132, 0.2)',
-          pointRadius: 0,
-          borderWidth: 2,
-          borderDash: [5, 5],
-          fill: true,
-        },
-      ],
+    // Calculate projections
+    setProjections({
+      daily: dailyAverage,
+      weekly: dailyAverage * 7,
+      monthly: dailyAverage * 30,
+      yearly: dailyAverage * 365,
     });
   };
 
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: `Tip Projections (${projectionPeriod === 'month' ? 'Next Month' : 'Next Year'})`,
-        color: 'white',
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context: any) {
-            return `$${context.raw ? context.raw.toFixed(2) : 0}`;
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          callback: function(value: any) {
-            return '$' + value;
-          },
-          color: 'rgba(255, 255, 255, 0.7)',
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        }
-      },
-      x: {
-        type: 'time',
-        time: {
-          unit: projectionPeriod === 'month' ? 'day' : 'month',
-          tooltipFormat: 'MMM d, yyyy',
-          displayFormats: {
-            day: 'MMM d',
-            month: 'MMM yyyy'
-          }
-        },
-        ticks: {
-          color: 'rgba(255, 255, 255, 0.7)',
-          maxRotation: 45,
-          minRotation: 45,
-        },
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        }
-      }
-    },
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   };
 
   if (isLoading) {
     return (
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8 animate-pulse">
-        <div className="h-64 flex items-center justify-center">
-          <p className="text-gray-400">Loading projections...</p>
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg animate-pulse">
+        <div className="h-full flex items-center justify-center">
+          <p className="text-gray-400">Calculating projections...</p>
         </div>
       </div>
     );
   }
 
-  if (!tips.length) {
+  if (error) {
     return (
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-        <div className="h-64 flex items-center justify-center">
-          <p className="text-gray-400">Not enough data for projections.</p>
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+        <div className="h-full flex items-center justify-center">
+          <p className="text-red-400">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Projections</h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setProjectionPeriod('month')}
-            className={`px-3 py-1 rounded ${
-              projectionPeriod === 'month' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-          >
-            Month
-          </button>
-          <button
-            onClick={() => setProjectionPeriod('year')}
-            className={`px-3 py-1 rounded ${
-              projectionPeriod === 'year' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-          >
-            Year
-          </button>
+    <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+      <h3 className="text-xl font-semibold mb-4 text-white">Income Projections</h3>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-gray-700 p-4 rounded-lg">
+          <h4 className="text-gray-300 text-sm font-medium mb-1">Daily</h4>
+          <p className="text-xl font-bold text-white">{formatCurrency(projections.daily)}</p>
+        </div>
+        
+        <div className="bg-gray-700 p-4 rounded-lg">
+          <h4 className="text-gray-300 text-sm font-medium mb-1">Weekly</h4>
+          <p className="text-xl font-bold text-white">{formatCurrency(projections.weekly)}</p>
+        </div>
+        
+        <div className="bg-gray-700 p-4 rounded-lg">
+          <h4 className="text-gray-300 text-sm font-medium mb-1">Monthly</h4>
+          <p className="text-xl font-bold text-white">{formatCurrency(projections.monthly)}</p>
+        </div>
+        
+        <div className="bg-gray-700 p-4 rounded-lg">
+          <h4 className="text-gray-300 text-sm font-medium mb-1">Yearly</h4>
+          <p className="text-xl font-bold text-white">{formatCurrency(projections.yearly)}</p>
         </div>
       </div>
-      <div className="h-64">
-        <Line options={options} data={chartData} />
-      </div>
+      
+      <p className="text-gray-400 text-xs mt-4">
+        *Projections are based on your historical tip data and may not reflect future earnings.
+      </p>
     </div>
   );
 } 
