@@ -10,7 +10,7 @@ if (typeof process !== 'undefined' && process.env.STRIPE_SECRET_KEY) {
   try {
     // Initialize Stripe with the latest API version
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16', // Updated to a stable version
+      apiVersion: '2025-02-24.acacia', // Using the exact version required by the type definition
     });
     console.log('Stripe initialized successfully');
   } catch (error) {
