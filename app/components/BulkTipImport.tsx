@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { supabase } from '../lib/supabase';
 import { formatDate } from '../lib/dateUtils';
 
 interface ParsedTip {
@@ -10,6 +9,11 @@ interface ParsedTip {
   amount: number;
   status: 'pending' | 'success' | 'error';
   message?: string;
+}
+
+interface Tip {
+  date: string;
+  amount: number;
 }
 
 const BulkTipImport: React.FC = () => {
@@ -198,334 +202,195 @@ const BulkTipImport: React.FC = () => {
     setParsedTips(parsedResults);
   };
 
-  // Robust tip saving function with multiple fallback approaches
+  // Save tip to localStorage
   const saveTip = async (userId: string, date: string, amountInCents: number) => {
     console.log('Attempting to save tip:', { userId, date, amountInCents });
     
-    // First approach: Direct Supabase query
     try {
+      // Get the storage key for this user
+      const storageKey = `tips_${userId}`;
+      
+      // Get existing tips from localStorage
+      const storedTips = localStorage.getItem(storageKey);
+      let tips: Tip[] = [];
+      
+      if (storedTips) {
+        tips = JSON.parse(storedTips);
+      }
+      
       // Check if a tip already exists for this date
-      const { data: existingTip, error: fetchError } = await supabase
-        .from('tips')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('date', date)
-        .maybeSingle();
+      const existingTipIndex = tips.findIndex(tip => tip.date === date);
       
-      if (fetchError) {
-        console.error('Error checking for existing tip (approach 1):', fetchError);
-        // Continue to next approach
+      if (existingTipIndex !== -1) {
+        // Update existing tip
+        tips[existingTipIndex].amount = amountInCents;
       } else {
-        let result;
-        
-        if (existingTip) {
-          // Update existing tip
-          result = await supabase
-            .from('tips')
-            .update({ amount: amountInCents })
-            .eq('id', existingTip.id);
-            
-          if (!result.error) {
-            console.log('Successfully updated tip (approach 1)');
-            return true;
-          }
-          console.error('Error updating tip (approach 1):', result.error);
-        } else {
-          // Insert new tip
-          result = await supabase
-            .from('tips')
-            .insert([{ 
-              user_id: userId, 
-              date: date, 
-              amount: amountInCents 
-            }]);
-            
-          if (!result.error) {
-            console.log('Successfully inserted tip (approach 1)');
-            return true;
-          }
-          console.error('Error inserting tip (approach 1):', result.error);
-        }
+        // Add new tip
+        tips.push({
+          date,
+          amount: amountInCents
+        });
       }
+      
+      // Save back to localStorage
+      localStorage.setItem(storageKey, JSON.stringify(tips));
+      
+      console.log('Tip saved successfully to localStorage');
+      return true;
     } catch (err) {
-      console.error('Unexpected error in saveTip approach 1:', err);
+      console.error('Error saving tip to localStorage:', err);
+      return false;
     }
-    
-    // Second approach: Using RPC (Remote Procedure Call)
-    try {
-      const { data, error } = await supabase.rpc('save_tip', {
-        p_user_id: userId,
-        p_date: date,
-        p_amount: amountInCents
-      });
-      
-      if (!error) {
-        console.log('Successfully saved tip using RPC (approach 2)');
-        return true;
-      }
-      
-      console.error('Error saving tip using RPC (approach 2):', error);
-    } catch (err) {
-      console.error('Unexpected error in saveTip approach 2:', err);
-    }
-    
-    // Third approach: Using raw SQL via Supabase
-    try {
-      // First check if tip exists
-      const { data: existsData, error: existsError } = await supabase.rpc('tip_exists', {
-        p_user_id: userId,
-        p_date: date
-      });
-      
-      if (existsError) {
-        console.error('Error checking if tip exists (approach 3):', existsError);
-      } else {
-        const exists = existsData;
-        
-        if (exists) {
-          // Update
-          const { error: updateError } = await supabase.rpc('update_tip', {
-            p_user_id: userId,
-            p_date: date,
-            p_amount: amountInCents
-          });
-          
-          if (!updateError) {
-            console.log('Successfully updated tip using SQL (approach 3)');
-            return true;
-          }
-          
-          console.error('Error updating tip using SQL (approach 3):', updateError);
-        } else {
-          // Insert
-          const { error: insertError } = await supabase.rpc('insert_tip', {
-            p_user_id: userId,
-            p_date: date,
-            p_amount: amountInCents
-          });
-          
-          if (!insertError) {
-            console.log('Successfully inserted tip using SQL (approach 3)');
-            return true;
-          }
-          
-          console.error('Error inserting tip using SQL (approach 3):', insertError);
-        }
-      }
-    } catch (err) {
-      console.error('Unexpected error in saveTip approach 3:', err);
-    }
-    
-    // Fourth approach: Simplified direct insert/update with less error checking
-    try {
-      // Try update first (will do nothing if no record exists)
-      const { error: updateError } = await supabase
-        .from('tips')
-        .update({ amount: amountInCents })
-        .match({ user_id: userId, date: date });
-      
-      if (!updateError) {
-        // Check if any rows were affected
-        const { count, error: countError } = await supabase
-          .from('tips')
-          .select('*', { count: 'exact', head: true })
-          .match({ user_id: userId, date: date });
-        
-        if (!countError && count && count > 0) {
-          console.log('Successfully updated tip (approach 4)');
-          return true;
-        }
-      }
-      
-      // If update didn't work or no rows existed, try insert
-      const { error: insertError } = await supabase
-        .from('tips')
-        .insert([{ 
-          user_id: userId, 
-          date: date, 
-          amount: amountInCents 
-        }]);
-      
-      if (!insertError) {
-        console.log('Successfully inserted tip (approach 4)');
-        return true;
-      }
-      
-      console.error('Error in simplified approach (approach 4):', insertError);
-    } catch (err) {
-      console.error('Unexpected error in saveTip approach 4:', err);
-    }
-    
-    // If all approaches failed, return false
-    return false;
   };
 
-  // Import the parsed tips to the database
+  // Import all parsed tips
   const importTips = async () => {
-    if (!user || parsedTips.length === 0) return;
+    if (!user) {
+      setImportSuccess('Please sign in to import tips');
+      return;
+    }
+    
+    if (parsedTips.length === 0) {
+      setImportSuccess('No tips to import');
+      return;
+    }
     
     setImporting(true);
     setImportSuccess(null);
     
-    // Create a copy of the parsed tips to update their status
-    const updatedTips = [...parsedTips];
+    const results = [...parsedTips];
     let successCount = 0;
     
-    for (let i = 0; i < updatedTips.length; i++) {
-      const tip = updatedTips[i];
+    for (let i = 0; i < results.length; i++) {
+      const tip = results[i];
       
       // Skip tips that already have an error
       if (tip.status === 'error') continue;
       
       try {
-        // Use our robust tip saving function
-        const result = await saveTip(user.id, tip.date, tip.amount);
+        // Try to save the tip
+        const success = await saveTip(user.id, tip.date, tip.amount);
         
-        if (result) {
-          updatedTips[i] = {
-            ...tip,
-            status: 'success'
-          };
+        if (success) {
+          results[i] = { ...tip, status: 'success' };
           successCount++;
         } else {
-          updatedTips[i] = {
-            ...tip,
-            status: 'error',
-            message: 'Failed to save tip after multiple attempts'
-          };
+          results[i] = { ...tip, status: 'error', message: 'Failed to save tip' };
         }
       } catch (err) {
-        console.error('Error in importTips:', err);
-        updatedTips[i] = {
-          ...tip,
-          status: 'error',
-          message: 'Unexpected error occurred'
-        };
+        console.error('Error importing tip:', err);
+        results[i] = { ...tip, status: 'error', message: 'Unexpected error' };
       }
       
-      // Update the UI after each tip is processed
-      setParsedTips([...updatedTips]);
+      // Update the UI after each tip
+      setParsedTips([...results]);
     }
     
     setImporting(false);
-    
-    if (successCount > 0) {
-      setImportSuccess(`Successfully imported ${successCount} tips!`);
-      
-      // Clear the input text on success
-      if (successCount === parsedTips.length) {
-        setInputText('');
-      }
-    }
+    setImportSuccess(`Successfully imported ${successCount} of ${parsedTips.length} tips`);
   };
 
   return (
     <div className="bg-black border border-gray-800 rounded-lg p-6 shadow-lg">
-      <h2 className="text-2xl font-bold mb-2 text-white">Bulk Import Tips</h2>
-      <p className="mb-6 text-gray-400 text-sm">
-        Paste your tip notes below. The system will try to detect dates and amounts automatically.
-      </p>
+      <h2 className="text-2xl font-bold mb-4 text-white">Bulk Import Tips</h2>
       
-      <div className="space-y-6">
-        {parseError && (
-          <div className="bg-red-900/50 border-l-4 border-red-500 text-white p-4 rounded-md">
-            <p className="font-bold">Error</p>
-            <p>{parseError}</p>
-          </div>
-        )}
-        
-        {importSuccess && (
-          <div className="bg-green-900/50 border-l-4 border-green-500 text-white p-4 rounded-md">
-            <p className="font-bold">Success!</p>
-            <p>{importSuccess}</p>
-          </div>
-        )}
+      <div className="mb-6">
+        <p className="text-gray-400 mb-4">
+          Paste text containing dates and amounts to quickly import multiple tips.
+          The parser will try to detect dates and amounts in various formats.
+        </p>
         
         <textarea
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Paste your tip notes here. Example:
-1/15 $120
-Jan 16 $85
-Yesterday $95
-Last Friday $150"
-          className="w-full bg-gray-900 border border-gray-700 focus:border-white text-white rounded-md p-4 h-40 resize-none"
-          disabled={importing}
+          className="w-full h-40 bg-black border-2 border-gray-700 focus:border-white text-white rounded-md py-2 px-3 transition-colors"
+          placeholder="Example:
+Monday 5/15 - $120
+Tuesday - $85.50
+Last Friday $95"
         />
         
-        <div className="flex space-x-4">
-          <button
-            onClick={parseInput}
-            disabled={importing || !inputText.trim()}
-            className={`flex-1 py-3 px-4 rounded-md transition-colors ${
-              importing || !inputText.trim()
-                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            Parse Input
-          </button>
-          
-          <button
-            onClick={importTips}
-            disabled={importing || parsedTips.length === 0}
-            className={`flex-1 py-3 px-4 rounded-md transition-colors ${
-              importing || parsedTips.length === 0
-                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
-          >
-            {importing ? 'Importing...' : 'Import Tips'}
-          </button>
-        </div>
-        
-        {parsedTips.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-3">Detected Tips</h3>
-            <div className="bg-gray-900 rounded-md overflow-hidden">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-400 uppercase bg-gray-800">
-                  <tr>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Amount</th>
-                    <th className="px-4 py-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsedTips.map((tip, index) => (
-                    <tr 
-                      key={index} 
-                      className={`border-b border-gray-800 ${
-                        tip.status === 'success' 
-                          ? 'bg-green-900/20' 
-                          : tip.status === 'error' 
-                            ? 'bg-red-900/20' 
-                            : ''
-                      }`}
-                    >
-                      <td className="px-4 py-3">{formatDate(tip.date)}</td>
-                      <td className="px-4 py-3">${(tip.amount / 100).toFixed(2)}</td>
-                      <td className="px-4 py-3">
-                        {tip.status === 'pending' && (
-                          <span className="text-gray-400">Pending</span>
-                        )}
-                        {tip.status === 'success' && (
-                          <span className="text-green-400">Imported</span>
-                        )}
-                        {tip.status === 'error' && (
-                          <span className="text-red-400" title={tip.message}>
-                            Error: {tip.message}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {parseError && (
+          <div className="mt-2 text-red-400 text-sm">
+            {parseError}
           </div>
         )}
+        
+        <button
+          onClick={parseInput}
+          className="mt-4 bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+        >
+          Parse Text
+        </button>
       </div>
+      
+      {parsedTips.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-xl font-bold mb-2 text-white">Parsed Tips</h3>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-900 text-gray-400 text-xs uppercase">
+                <tr>
+                  <th className="px-4 py-2">Date</th>
+                  <th className="px-4 py-2">Amount</th>
+                  <th className="px-4 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {parsedTips.map((tip, index) => (
+                  <tr key={index} className="bg-gray-900/30 hover:bg-gray-800 transition-colors">
+                    <td className="px-4 py-2">{formatDate(tip.date)}</td>
+                    <td className="px-4 py-2">${(tip.amount / 100).toFixed(2)}</td>
+                    <td className="px-4 py-2">
+                      {tip.status === 'pending' && (
+                        <span className="text-yellow-400">Pending</span>
+                      )}
+                      {tip.status === 'success' && (
+                        <span className="text-green-400">Imported</span>
+                      )}
+                      {tip.status === 'error' && (
+                        <span className="text-red-400" title={tip.message}>
+                          Error: {tip.message}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <div className="mt-4 flex justify-between items-center">
+            <button
+              onClick={importTips}
+              disabled={importing || !user}
+              className={`bg-white text-black font-bold py-2 px-4 rounded-md transition-colors ${
+                importing || !user ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'
+              }`}
+            >
+              {importing ? 'Importing...' : 'Import All Tips'}
+            </button>
+            
+            <button
+              onClick={() => {
+                setParsedTips([]);
+                setInputText('');
+                setImportSuccess(null);
+              }}
+              className="text-gray-400 hover:text-white"
+            >
+              Clear
+            </button>
+          </div>
+          
+          {importSuccess && (
+            <div className="mt-4 bg-green-900/50 border-l-4 border-green-500 text-white p-4 rounded-md">
+              {importSuccess}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

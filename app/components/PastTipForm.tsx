@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { supabase } from '../lib/supabase';
 import { formatDate } from '../lib/dateUtils';
-import * as tipService from '../lib/tipService';
 
 interface PastTipFormProps {
   onTipAdded: () => void;
   selectedDate?: string;
+}
+
+interface Tip {
+  date: string;
+  amount: number;
 }
 
 const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = '' }) => {
@@ -41,17 +44,27 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
     try {
       console.log('Checking for existing tip on date:', dateToCheck);
       
-      // Get tips for the date range (just this one date)
-      const tips = await tipService.getTipsByDateRange(user.id, dateToCheck, dateToCheck);
+      // Get tips from localStorage
+      const storageKey = `tips_${user.id}`;
+      const storedTips = localStorage.getItem(storageKey);
       
-      if (tips.length > 0) {
-        console.log('Found existing tip:', tips[0]);
-        // Convert cents to dollars for display
-        const amountInDollars = (tips[0].amount / 100).toString();
-        setAmount(amountInDollars);
-        setExistingTip(tips[0].amount);
+      if (storedTips) {
+        const tips: Tip[] = JSON.parse(storedTips);
+        const existingTip = tips.find(tip => tip.date === dateToCheck);
+        
+        if (existingTip) {
+          console.log('Found existing tip:', existingTip);
+          // Convert cents to dollars for display
+          const amountInDollars = (existingTip.amount / 100).toString();
+          setAmount(amountInDollars);
+          setExistingTip(existingTip.amount);
+        } else {
+          console.log('No existing tip found for date:', dateToCheck);
+          setAmount('');
+          setExistingTip(null);
+        }
       } else {
-        console.log('No existing tip found for date:', dateToCheck);
+        console.log('No tips found in localStorage');
         setAmount('');
         setExistingTip(null);
       }
@@ -97,21 +110,40 @@ const PastTipForm: React.FC<PastTipFormProps> = ({ onTipAdded, selectedDate = ''
       // Convert dollars to cents for storage
       const amountInCents = Math.round(Number(amount) * 100);
       
-      // Save tip using our service
-      const result = await tipService.saveTip(user.id, date, amountInCents);
+      // Save tip to localStorage
+      const storageKey = `tips_${user.id}`;
+      const storedTips = localStorage.getItem(storageKey);
+      let tips: Tip[] = [];
       
-      if (result) {
-        const action = existingTip ? 'updated' : 'added';
-        setSuccess(`$${amount} ${action} for ${formatDate(date)}`);
-        setExistingTip(amountInCents);
-        
-        console.log('Tip saved successfully, calling onTipAdded callback');
-        
-        // Call the callback to refresh the calendar
-        onTipAdded();
-      } else {
-        setError('Failed to save tip. Please try again.');
+      if (storedTips) {
+        tips = JSON.parse(storedTips);
       }
+      
+      // Check if a tip already exists for this date
+      const existingTipIndex = tips.findIndex(tip => tip.date === date);
+      
+      if (existingTipIndex !== -1) {
+        // Update existing tip
+        tips[existingTipIndex].amount = amountInCents;
+      } else {
+        // Add new tip
+        tips.push({
+          date,
+          amount: amountInCents
+        });
+      }
+      
+      // Save back to localStorage
+      localStorage.setItem(storageKey, JSON.stringify(tips));
+      
+      const action = existingTip ? 'updated' : 'added';
+      setSuccess(`$${amount} ${action} for ${formatDate(date)}`);
+      setExistingTip(amountInCents);
+      
+      console.log('Tip saved successfully, calling onTipAdded callback');
+      
+      // Call the callback to refresh the calendar
+      onTipAdded();
     } catch (err) {
       console.error('Error adding tip:', err);
       setError('An error occurred while saving your tip. Please try again.');

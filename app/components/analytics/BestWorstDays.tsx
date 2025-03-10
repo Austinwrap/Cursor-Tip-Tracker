@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { getBestAndWorstDays, Tip } from '../../lib/supabase';
 import { formatDate, formatCurrency, getDayOfWeek } from '../../lib/dateUtils';
+
+interface Tip {
+  date: string;
+  amount: number;
+}
 
 const BestWorstDays: React.FC = () => {
   const [bestDay, setBestDay] = useState<Tip | null>(null);
@@ -18,9 +22,34 @@ const BestWorstDays: React.FC = () => {
       setError(null);
       
       try {
-        const { best, worst } = await getBestAndWorstDays(user.id);
-        setBestDay(best);
-        setWorstDay(worst);
+        // Get tips from localStorage
+        const storageKey = `tips_${user.id}`;
+        const storedTips = localStorage.getItem(storageKey);
+        
+        if (storedTips) {
+          const tips: Tip[] = JSON.parse(storedTips);
+          
+          if (tips.length === 0) {
+            setBestDay(null);
+            setWorstDay(null);
+            return;
+          }
+          
+          // Sort tips by amount
+          const sortedTips = [...tips].sort((a, b) => b.amount - a.amount);
+          
+          // Get best day (highest amount)
+          const best = sortedTips[0];
+          
+          // Get worst day (lowest amount)
+          const worst = sortedTips[sortedTips.length - 1];
+          
+          setBestDay(best);
+          setWorstDay(worst);
+        } else {
+          setBestDay(null);
+          setWorstDay(null);
+        }
       } catch (err) {
         console.error('Error fetching best/worst days:', err);
         setError('Failed to load best and worst days');

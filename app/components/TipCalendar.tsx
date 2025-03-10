@@ -4,16 +4,19 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { formatDate, formatCurrency } from '../lib/dateUtils';
 import PastTipForm from './PastTipForm';
-import { supabase } from '../lib/supabase';
-import * as tipService from '../lib/tipService';
 
 interface TipCalendarProps {
   selectedDate?: Date;
   onDateSelect?: (date: Date) => void;
 }
 
+interface Tip {
+  date: string;
+  amount: number;
+}
+
 const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelectedDate, onDateSelect }) => {
-  const [tips, setTips] = useState<tipService.Tip[]>([]);
+  const [tips, setTips] = useState<Tip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -36,24 +39,48 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     setError(null);
     
     try {
-      // Get all tips for the user
-      const allTips = await tipService.getAllTips(user.id);
-      setTips(allTips);
+      // Get tips from localStorage
+      const storageKey = `tips_${user.id}`;
+      const storedTips = localStorage.getItem(storageKey);
       
-      // Calculate monthly total
-      const year = currentMonth.getFullYear();
-      const month = currentMonth.getMonth();
-      const monthTotal = await tipService.getMonthlyTotal(user.id, year, month);
-      setMonthlyTotal(monthTotal);
-      
-      // Calculate weekly total (current week)
-      const today = new Date();
-      const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
-      const startOfWeek = new Date(today);
-      startOfWeek.setDate(today.getDate() - dayOfWeek); // Go back to Sunday
-      const weeklyStartDate = startOfWeek.toISOString().split('T')[0];
-      const weekTotal = await tipService.getWeeklyTotal(user.id, weeklyStartDate);
-      setWeeklyTotal(weekTotal);
+      if (storedTips) {
+        const allTips: Tip[] = JSON.parse(storedTips);
+        setTips(allTips);
+        
+        // Calculate monthly total
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const monthStart = new Date(year, month, 1).toISOString().split('T')[0];
+        const monthEnd = new Date(year, month + 1, 0).toISOString().split('T')[0];
+        
+        const monthlyTips = allTips.filter(tip => 
+          tip.date >= monthStart && tip.date <= monthEnd
+        );
+        
+        const monthTotal = monthlyTips.reduce((sum, tip) => sum + tip.amount, 0);
+        setMonthlyTotal(monthTotal);
+        
+        // Calculate weekly total (current week)
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - dayOfWeek); // Go back to Sunday
+        const weeklyStartDate = startOfWeek.toISOString().split('T')[0];
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        const weeklyEndDate = endOfWeek.toISOString().split('T')[0];
+        
+        const weeklyTips = allTips.filter(tip => 
+          tip.date >= weeklyStartDate && tip.date <= weeklyEndDate
+        );
+        
+        const weekTotal = weeklyTips.reduce((sum, tip) => sum + tip.amount, 0);
+        setWeeklyTotal(weekTotal);
+      } else {
+        setTips([]);
+        setMonthlyTotal(0);
+        setWeeklyTotal(0);
+      }
     } catch (err) {
       console.error('Error loading tips:', err);
       setError('Failed to load tips. Please try again.');
@@ -74,40 +101,6 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
   useEffect(() => {
     loadTips();
   }, [loadTips]);
-
-  // Set up real-time subscription to tips table
-  useEffect(() => {
-    if (!user) return;
-
-    console.log('Setting up real-time subscription for tips table');
-    
-    // Subscribe to changes in the tips table for this user
-    const subscription = supabase
-      .channel('tips-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'tips',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('Real-time update received:', payload);
-          // Refresh tips when any change is detected
-          loadTips();
-        }
-      )
-      .subscribe((status) => {
-        console.log('Subscription status:', status);
-      });
-
-    // Clean up subscription on unmount
-    return () => {
-      console.log('Cleaning up subscription');
-      supabase.removeChannel(subscription);
-    };
-  }, [user, loadTips]);
 
   const handleTipAdded = async () => {
     // Refresh tips after a new one is added
@@ -133,20 +126,39 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
         return;
       }
       
-      // Save the tip using our service
-      const success = await tipService.saveTip(user.id, quickEditDate, amountInCents);
+      // Save tip to localStorage
+      const storageKey = `tips_${user.id}`;
+      const storedTips = localStorage.getItem(storageKey);
+      let tipsList: Tip[] = [];
       
-      if (success) {
-        // Success!
-        setQuickEditSuccess(`$${quickEditAmount} saved for ${formatDate(quickEditDate)}`);
-        setQuickEditAmount('');
-        setQuickEditDate(null);
-        
-        // Refresh tips
-        await loadTips();
-      } else {
-        setQuickEditError('Failed to save tip. Please try again.');
+      if (storedTips) {
+        tipsList = JSON.parse(storedTips);
       }
+      
+      // Check if a tip already exists for this date
+      const existingTipIndex = tipsList.findIndex(tip => tip.date === quickEditDate);
+      
+      if (existingTipIndex !== -1) {
+        // Update existing tip
+        tipsList[existingTipIndex].amount = amountInCents;
+      } else {
+        // Add new tip
+        tipsList.push({
+          date: quickEditDate,
+          amount: amountInCents
+        });
+      }
+      
+      // Save back to localStorage
+      localStorage.setItem(storageKey, JSON.stringify(tipsList));
+      
+      // Success!
+      setQuickEditSuccess(`$${quickEditAmount} saved for ${formatDate(quickEditDate)}`);
+      setQuickEditAmount('');
+      setQuickEditDate(null);
+      
+      // Refresh tips
+      await loadTips();
     } catch (err) {
       console.error('Error in quick save tip:', err);
       setQuickEditError('An unexpected error occurred');
@@ -238,244 +250,209 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
-                {sortedTips.map((tip) => {
+                {sortedTips.map((tip, index) => {
                   const date = new Date(tip.date);
                   const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
                   
                   return (
                     <tr 
-                      key={tip.id} 
+                      key={index} 
                       className="bg-gray-900/30 hover:bg-gray-800 transition-colors cursor-pointer"
                       onClick={() => handleDateClick(tip.date)}
                     >
-                      <td className="px-4 py-3 text-gray-300">{formatDate(tip.date)}</td>
-                      <td className="px-4 py-3 text-gray-400">{dayOfWeek}</td>
-                      <td className="px-4 py-3 text-right font-bold text-green-400">
-                        {formatCurrency(tip.amount)}
-                      </td>
+                      <td className="px-4 py-3">{formatDate(tip.date)}</td>
+                      <td className="px-4 py-3">{dayOfWeek}</td>
+                      <td className="px-4 py-3 text-right">{formatCurrency(tip.amount)}</td>
                     </tr>
                   );
                 })}
               </tbody>
-              <tfoot className="bg-gray-900">
-                <tr>
-                  <td className="px-4 py-3 font-bold rounded-bl-lg">Total</td>
-                  <td className="px-4 py-3"></td>
-                  <td className="px-4 py-3 text-right font-bold text-green-400 rounded-br-lg">
-                    {formatCurrency(tips.reduce((sum, tip) => sum + tip.amount, 0))}
-                  </td>
-                </tr>
-              </tfoot>
             </table>
           </div>
         )}
-        
-        <div className="mt-6 flex justify-center">
-          <button 
-            onClick={() => loadTips()} 
-            className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
-          >
-            Refresh Tip History
-          </button>
-        </div>
       </div>
     );
   };
 
+  // Render the calendar view
   const renderCalendar = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    
     const daysInMonth = getDaysInMonth(year, month);
     const firstDayOfMonth = getFirstDayOfMonth(year, month);
     
-    const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    
-    // Create a map of date strings to tip amounts for quick lookup
-    const tipMap: Record<string, number> = {};
-    tips.forEach(tip => {
-      tipMap[tip.date] = tip.amount;
-    });
-    
-    // Generate calendar days
-    const calendarDays = [];
+    // Create array of day elements
+    const days = [];
     
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayOfMonth; i++) {
-      calendarDays.push(<div key={`empty-${i}`} className="h-24 border border-gray-800 bg-black/20"></div>);
+      days.push(
+        <div key={`empty-${i}`} className="h-14 bg-gray-900/20 rounded-md"></div>
+      );
     }
     
     // Add cells for each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const dateString = date.toISOString().split('T')[0];
-      const hasTip = dateString in tipMap;
-      const tipAmount = hasTip ? tipMap[dateString] : 0;
+      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isToday = dateString === new Date().toISOString().split('T')[0];
+      const isSelected = dateString === selectedDate;
+      const isQuickEdit = dateString === quickEditDate;
       
-      const isToday = new Date().toISOString().split('T')[0] === dateString;
-      const isSelected = selectedDate === dateString;
-      const isQuickEdit = quickEditDate === dateString;
-      const isPastOrToday = date <= new Date();
+      // Find tip for this day
+      const dayTip = tips.find(tip => tip.date === dateString);
       
-      calendarDays.push(
+      days.push(
         <div 
-          key={dateString} 
-          className={`h-24 border border-gray-800 p-2 transition-all ${
-            isToday ? 'bg-gray-900' : 'bg-black/20'
-          } ${isSelected ? 'ring-2 ring-white' : ''} ${
-            isPastOrToday ? 'cursor-pointer hover:bg-gray-800' : ''
-          } ${hasTip ? 'border-green-500 border-2' : ''} ${
-            isQuickEdit ? 'bg-gray-800' : ''
-          }`}
-          onClick={() => isPastOrToday && handleDateClick(dateString)}
+          key={dateString}
+          className={`
+            relative h-14 rounded-md p-1 cursor-pointer transition-all
+            ${dayTip ? 'bg-green-900/20 hover:bg-green-900/30' : 'bg-gray-900/30 hover:bg-gray-800'}
+            ${isToday ? 'ring-2 ring-cyan-500' : ''}
+            ${isSelected ? 'ring-2 ring-white' : ''}
+            ${isQuickEdit ? 'ring-2 ring-yellow-500' : ''}
+          `}
+          onClick={() => handleDateClick(dateString)}
         >
-          <div className="flex flex-col h-full">
-            <div className="flex justify-between items-start">
-              <span className={`text-sm ${isToday ? 'font-bold text-white' : 'text-gray-500'}`}>
-                {day}
-              </span>
+          <div className="text-xs font-semibold">{day}</div>
+          {dayTip && (
+            <div className="absolute bottom-1 right-1 text-xs font-bold text-green-400">
+              ${(dayTip.amount / 100).toFixed(0)}
             </div>
-            
-            {hasTip && !isQuickEdit && (
-              <div className="flex-grow flex items-center justify-center">
-                <div className="bg-green-900/30 px-3 py-2 rounded-lg text-center">
-                  <span className="text-xl font-bold text-green-400">
-                    {formatCurrency(tipAmount)}
-                  </span>
-                </div>
-              </div>
-            )}
-            
-            {isQuickEdit && (
-              <div className="mt-1 flex flex-col space-y-1">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-1 flex items-center pointer-events-none">
-                    <span className="text-gray-400">$</span>
-                  </div>
-                  <input
-                    type="number"
-                    value={quickEditAmount}
-                    onChange={(e) => setQuickEditAmount(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded py-1 pl-5 pr-2"
-                    placeholder="0"
-                    min="0"
-                    step="1"
-                    autoFocus
-                  />
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    saveQuickTip();
-                  }}
-                  disabled={savingQuickEdit}
-                  className="bg-green-600 hover:bg-green-700 text-white text-xs py-1 px-2 rounded"
-                >
-                  {savingQuickEdit ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       );
     }
     
     return (
-      <div className="space-y-6">
-        <div className="bg-black border border-gray-800 rounded-lg p-6 shadow-lg">
-          <div className="flex justify-between items-center mb-4">
-            <button 
-              onClick={() => setCurrentMonth(new Date(year, month - 1))}
-              className="text-gray-500 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-800"
-            >
-              ←
-            </button>
-            <h2 className="text-xl font-bold text-white uppercase tracking-wide">
-              {monthNames[month]} {year}
-            </h2>
-            <button 
-              onClick={() => setCurrentMonth(new Date(year, month + 1))}
-              className="text-gray-500 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-800"
-            >
-              →
-            </button>
-          </div>
-          
-          {/* Summary section */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-gray-900 rounded-lg p-3 text-center">
-              <p className="text-gray-400 text-sm">Monthly Total</p>
-              <p className="text-2xl font-bold text-green-400">{formatCurrency(monthlyTotal)}</p>
-            </div>
-            <div className="bg-gray-900 rounded-lg p-3 text-center">
-              <p className="text-gray-400 text-sm">Weekly Total</p>
-              <p className="text-2xl font-bold text-green-400">{formatCurrency(weeklyTotal)}</p>
-            </div>
-          </div>
-          
-          {/* View toggle button */}
-          <div className="mb-4 flex justify-center">
+      <div className="bg-black border border-gray-800 rounded-lg p-6 shadow-lg">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-white">Tip Calendar</h2>
+          <div className="flex space-x-2">
             <button 
               onClick={() => setShowLedger(true)}
-              className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-md transition-colors"
+              className="text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-md text-sm transition-colors"
             >
-              View Tip History
+              View List
             </button>
-          </div>
-          
-          {/* Quick edit feedback messages */}
-          {quickEditSuccess && (
-            <div className="mb-4 p-2 bg-green-900/30 border border-green-500/30 rounded text-sm text-green-400 text-center">
-              {quickEditSuccess}
-            </div>
-          )}
-          
-          {quickEditError && (
-            <div className="mb-4 p-2 bg-red-900/30 border border-red-500/30 rounded text-sm text-red-400 text-center">
-              {quickEditError}
-            </div>
-          )}
-          
-          <div className="grid grid-cols-7 gap-1">
-            {dayNames.map(day => (
-              <div key={day} className="text-center text-gray-500 font-medium py-2 text-xs">
-                {day}
-              </div>
-            ))}
-            {calendarDays}
-          </div>
-          
-          <div className="mt-4 text-center">
-            <p className="text-gray-400 text-sm">Click on a date to add or edit a tip</p>
-          </div>
-          
-          {/* Manual refresh button */}
-          <div className="mt-4 flex justify-center">
             <button 
-              onClick={() => loadTips()} 
-              className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+              onClick={() => {
+                const prevMonth = new Date(currentMonth);
+                prevMonth.setMonth(prevMonth.getMonth() - 1);
+                setCurrentMonth(prevMonth);
+              }}
+              className="text-gray-400 hover:text-white"
             >
-              Refresh Calendar
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <span className="text-white font-medium">
+              {currentMonth.toLocaleDateString('default', { month: 'long', year: 'numeric' })}
+            </span>
+            <button 
+              onClick={() => {
+                const nextMonth = new Date(currentMonth);
+                nextMonth.setMonth(nextMonth.getMonth() + 1);
+                setCurrentMonth(nextMonth);
+              }}
+              className="text-gray-400 hover:text-white"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
             </button>
           </div>
         </div>
         
-        {selectedDate && (
-          <div className="animate-fadeIn">
-            <PastTipForm onTipAdded={handleTipAdded} selectedDate={selectedDate} />
+        {/* Summary section */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-gray-900 rounded-lg p-4 text-center">
+            <p className="text-gray-400 text-sm">Monthly Total</p>
+            <p className="text-2xl font-bold text-green-400">{formatCurrency(monthlyTotal)}</p>
+          </div>
+          <div className="bg-gray-900 rounded-lg p-4 text-center">
+            <p className="text-gray-400 text-sm">Weekly Total</p>
+            <p className="text-2xl font-bold text-green-400">{formatCurrency(weeklyTotal)}</p>
+          </div>
+        </div>
+        
+        {/* Days of week header */}
+        <div className="grid grid-cols-7 gap-1 mb-1">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            <div key={day} className="text-center text-xs font-medium text-gray-400">
+              {day}
+            </div>
+          ))}
+        </div>
+        
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {days}
+        </div>
+        
+        {/* Quick edit form */}
+        {quickEditDate && (
+          <div className="mt-6 bg-gray-900 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Quick Edit: {formatDate(quickEditDate)}
+            </h3>
+            
+            {quickEditError && (
+              <div className="mb-4 text-red-400 text-sm">
+                {quickEditError}
+              </div>
+            )}
+            
+            {quickEditSuccess && (
+              <div className="mb-4 text-green-400 text-sm">
+                {quickEditSuccess}
+              </div>
+            )}
+            
+            <div className="flex space-x-2">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-400">$</span>
+                </div>
+                <input
+                  type="number"
+                  value={quickEditAmount}
+                  onChange={(e) => setQuickEditAmount(e.target.value)}
+                  className="w-full bg-black border border-gray-700 focus:border-white text-white rounded-md py-2 pl-8 transition-colors"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <button
+                onClick={saveQuickTip}
+                disabled={savingQuickEdit}
+                className={`px-4 py-2 rounded-md transition-colors ${
+                  savingQuickEdit
+                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {savingQuickEdit ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={() => setQuickEditDate(null)}
+                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
       </div>
     );
   };
 
-  if (loading && tips.length === 0) {
+  if (loading) {
     return (
       <div className="bg-black border border-gray-800 rounded-lg p-6 shadow-lg">
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-white"></div>
-          <p className="mt-2 text-gray-400">Loading your tip history...</p>
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin h-8 w-8 border-4 border-cyan-500 rounded-full border-t-transparent"></div>
         </div>
       </div>
     );
@@ -483,12 +460,12 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
 
   if (error) {
     return (
-      <div className="bg-red-900/50 border-l-4 border-red-500 text-white p-4 rounded-lg">
-        <p className="font-bold">Error loading tips</p>
+      <div className="bg-red-900/50 border border-red-500 text-white p-6 rounded-lg">
+        <h2 className="text-xl font-bold mb-2">Error Loading Tips</h2>
         <p>{error}</p>
-        <button 
+        <button
           onClick={() => loadTips()}
-          className="mt-2 bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded-md"
+          className="mt-4 bg-white text-red-900 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors"
         >
           Try Again
         </button>
@@ -496,6 +473,7 @@ const TipCalendar: React.FC<TipCalendarProps> = ({ selectedDate: externalSelecte
     );
   }
 
+  // Show either the ledger or calendar view
   return showLedger ? renderLedger() : renderCalendar();
 };
 
