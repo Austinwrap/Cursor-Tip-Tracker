@@ -36,68 +36,96 @@ export default function Dashboard() {
       setSyncStatus('Loading tips...');
       
       try {
-        // Always try to load from Supabase first
-        const supabaseTips = await getSupabaseTips(user.id);
+        // Get the storage key for this user
+        const storageKey = `tips_${user.id}`;
         
-        if (supabaseTips && supabaseTips.length > 0) {
-          // Convert Supabase tips to the format used in the dashboard
-          const formattedTips = supabaseTips.map(tip => ({
-            date: tip.date,
-            amount: tip.amount
-          }));
-          
-          setTips(formattedTips);
-          
-          // Also update localStorage as a backup
-          const storageKey = `tips_${user.id}`;
-          localStorage.setItem(storageKey, JSON.stringify(formattedTips));
-          setSyncStatus('Tips loaded from database');
-        } else {
-          // If no tips in Supabase, check localStorage as a fallback
-          const storageKey = `tips_${user.id}`;
+        // Try to load from both sources
+        let supabaseTips = [];
+        let localTips = [];
+        let supabaseError = false;
+        
+        // Try to load from Supabase
+        try {
+          const fetchedTips = await getSupabaseTips(user.id);
+          if (fetchedTips && fetchedTips.length > 0) {
+            supabaseTips = fetchedTips.map(tip => ({
+              date: tip.date,
+              amount: tip.amount
+            }));
+            console.log('Loaded tips from Supabase:', supabaseTips.length);
+          }
+        } catch (error) {
+          console.error('Error loading tips from Supabase:', error);
+          supabaseError = true;
+        }
+        
+        // Try to load from localStorage
+        try {
           const storedTips = localStorage.getItem(storageKey);
-          
           if (storedTips) {
-            const parsedTips = JSON.parse(storedTips);
-            setTips(parsedTips);
-            
-            // Sync localStorage tips to Supabase
+            localTips = JSON.parse(storedTips);
+            console.log('Loaded tips from localStorage:', localTips.length);
+          }
+        } catch (error) {
+          console.error('Error loading tips from localStorage:', error);
+        }
+        
+        // Decide which tips to use
+        if (supabaseTips.length > 0) {
+          // If we have Supabase tips, use those
+          setTips(supabaseTips);
+          setSyncStatus('Tips loaded from database');
+          
+          // Update localStorage with the Supabase data
+          localStorage.setItem(storageKey, JSON.stringify(supabaseTips));
+        } else if (localTips.length > 0) {
+          // If no Supabase tips but we have localStorage tips, use those
+          setTips(localTips);
+          setSyncStatus('Tips loaded from local storage');
+          
+          // If Supabase failed, don't try to sync
+          if (!supabaseError) {
+            // Try to sync localStorage tips to Supabase
             setIsSyncing(true);
             setSyncStatus('Syncing tips to database...');
             
             let syncCount = 0;
-            for (const tip of parsedTips) {
+            for (const tip of localTips) {
               const success = await saveTipToSupabase(user.id, tip.date, tip.amount);
               if (success) syncCount++;
             }
             
-            setSyncStatus(`Synced ${syncCount} of ${parsedTips.length} tips to database`);
-            setIsSyncing(false);
-            
-            // Reload from Supabase to ensure consistency
-            const refreshedTips = await getSupabaseTips(user.id);
-            if (refreshedTips && refreshedTips.length > 0) {
-              const refreshedFormattedTips = refreshedTips.map(tip => ({
-                date: tip.date,
-                amount: tip.amount
-              }));
-              setTips(refreshedFormattedTips);
+            if (syncCount > 0) {
+              setSyncStatus(`Synced ${syncCount} of ${localTips.length} tips to database`);
+              
+              // Reload from Supabase to ensure consistency
+              try {
+                const refreshedTips = await getSupabaseTips(user.id);
+                if (refreshedTips && refreshedTips.length > 0) {
+                  const refreshedFormattedTips = refreshedTips.map(tip => ({
+                    date: tip.date,
+                    amount: tip.amount
+                  }));
+                  setTips(refreshedFormattedTips);
+                  localStorage.setItem(storageKey, JSON.stringify(refreshedFormattedTips));
+                }
+              } catch (refreshError) {
+                console.error('Error refreshing tips after sync:', refreshError);
+              }
+            } else {
+              setSyncStatus('Failed to sync tips to database');
             }
-          } else {
-            setSyncStatus('No tips found');
+            
+            setIsSyncing(false);
           }
+        } else {
+          // No tips found in either source
+          setTips([]);
+          setSyncStatus('No tips found');
         }
       } catch (error) {
-        console.error('Error loading tips:', error);
-        setSyncStatus('Error loading tips from database');
-        
-        // Fall back to localStorage if there's an error
-        const storageKey = `tips_${user.id}`;
-        const storedTips = localStorage.getItem(storageKey);
-        if (storedTips) {
-          setTips(JSON.parse(storedTips));
-          setSyncStatus('Using locally stored tips (offline mode)');
-        }
+        console.error('Error in loadTips:', error);
+        setSyncStatus('Error loading tips');
       } finally {
         setIsLoading(false);
       }
@@ -136,50 +164,72 @@ export default function Dashboard() {
     setSyncStatus('Saving tip...');
 
     try {
-      // Always save to Supabase first
+      console.log('Adding tip:', { date, amount, userId: user.id });
+      
+      // Create the new tip object
+      const newTip = { date, amount };
+      
+      // Always update local state first for immediate feedback
+      const newTips = [...tips, newTip];
+      setTips(newTips);
+      
+      // Save to localStorage as a backup
+      const storageKey = `tips_${user.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(newTips));
+      
+      // Then try to save to Supabase
       const success = await saveTipToSupabase(user.id, date, amount);
       
       if (success) {
-        // If successful, update local state
-        const newTips = [...tips, { date, amount }];
-        setTips(newTips);
-        
-        // Also update localStorage as a backup
-        const storageKey = `tips_${user.id}`;
-        localStorage.setItem(storageKey, JSON.stringify(newTips));
-        
         setSyncStatus('Tip saved successfully');
         
         // Reload from Supabase to ensure consistency
-        const refreshedTips = await getSupabaseTips(user.id);
-        if (refreshedTips && refreshedTips.length > 0) {
-          const refreshedFormattedTips = refreshedTips.map(tip => ({
-            date: tip.date,
-            amount: tip.amount
-          }));
-          setTips(refreshedFormattedTips);
+        try {
+          const refreshedTips = await getSupabaseTips(user.id);
+          if (refreshedTips && refreshedTips.length > 0) {
+            const refreshedFormattedTips = refreshedTips.map(tip => ({
+              date: tip.date,
+              amount: tip.amount
+            }));
+            setTips(refreshedFormattedTips);
+            
+            // Update localStorage with the refreshed data
+            localStorage.setItem(storageKey, JSON.stringify(refreshedFormattedTips));
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing tips from Supabase:', refreshError);
+          // We already updated local state, so no need to show an error
         }
       } else {
-        setSyncStatus('Error saving tip to database');
+        setSyncStatus('Saved locally only (database sync failed)');
+        console.error('Failed to save tip to Supabase, but saved locally');
       }
     } catch (error) {
       console.error('Error saving tip:', error);
       setSyncStatus('Error saving tip');
       
-      // Fall back to local storage only if Supabase fails
-      const newTips = [...tips, { date, amount }];
-      setTips(newTips);
-      
-      const storageKey = `tips_${user.id}`;
-      localStorage.setItem(storageKey, JSON.stringify(newTips));
-      
-      setSyncStatus('Tip saved locally only (offline mode)');
+      // Still try to save locally even if there was an error
+      try {
+        const newTip = { date, amount };
+        const newTips = [...tips, newTip];
+        
+        // Update local state
+        setTips(newTips);
+        
+        // Save to localStorage
+        const storageKey = `tips_${user.id}`;
+        localStorage.setItem(storageKey, JSON.stringify(newTips));
+        
+        setSyncStatus('Tip saved locally only (offline mode)');
+      } catch (localError) {
+        console.error('Error saving tip locally:', localError);
+        setSyncStatus('Failed to save tip');
+      }
     } finally {
       setIsLoading(false);
+      // Clear input
+      setTipAmount('');
     }
-    
-    // Clear input
-    setTipAmount('');
   };
 
   // Edit tip function
