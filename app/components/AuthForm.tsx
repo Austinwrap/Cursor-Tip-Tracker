@@ -1,112 +1,149 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useAuth } from '../lib/AuthContext';
+import { useState } from 'react';
+import { supabase } from '@/app/lib/supabase';
 import { useRouter } from 'next/navigation';
 
-type AuthFormProps = {
-  isSignUp?: boolean;
-};
+type AuthMode = 'signin' | 'signup';
 
-const AuthForm: React.FC<AuthFormProps> = ({ isSignUp = false }) => {
+export default function AuthForm({ initialMode = 'signin' }: { initialMode?: AuthMode }) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     setError(null);
     setSuccess(null);
-    setLoading(true);
-
+    
     try {
-      if (isSignUp) {
-        // Sign up flow
-        const { error, success } = await signUp(email, password);
+      if (mode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
+          },
+        });
         
-        if (error) {
-          setError(error.message || 'Failed to create account. Please try again.');
-        } else if (success) {
-          setSuccess('Account created successfully! You may need to verify your email before signing in.');
-          // Clear form
-          setEmail('');
-          setPassword('');
-        }
+        if (error) throw error;
+        
+        setSuccess('Account created successfully! Please check your email for verification.');
       } else {
-        // Sign in flow
-        const { error, success } = await signIn(email, password);
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         
-        if (error) {
-          setError(error.message || 'Invalid email or password. Please try again.');
-        } else if (success) {
-          setSuccess('Signing in...');
-          // Router redirect is handled in AuthContext
-        }
+        if (error) throw error;
+        
+        setSuccess('Signed in successfully!');
+        router.push('/dashboard');
       }
     } catch (err) {
-      setError('Authentication error. Please try again later.');
-      console.error('Auth error:', err);
+      console.error('Authentication error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred during authentication');
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
+    setError(null);
+    setSuccess(null);
+  };
+
   return (
-    <div className="w-full max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-8 text-center text-white tracking-tight">
-        {isSignUp ? 'CREATE ACCOUNT' : 'WELCOME BACK'}
+    <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-center">
+        {mode === 'signin' ? 'Sign In' : 'Create Account'}
       </h2>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleAuth} className="space-y-4">
+        {mode === 'signup' && (
+          <div>
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+              Full Name
+            </label>
+            <input
+              id="fullName"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+        )}
+        
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+            minLength={6}
+          />
+        </div>
+        
         {error && (
-          <div className="bg-red-900/50 border-l-4 border-red-500 text-white p-3 rounded-sm text-sm">
+          <div className="p-3 bg-red-100 border border-red-300 text-red-700 rounded">
             {error}
           </div>
         )}
         
         {success && (
-          <div className="bg-green-900/50 border-l-4 border-green-500 text-white p-3 rounded-sm text-sm">
+          <div className="p-3 bg-green-100 border border-green-300 text-green-700 rounded">
             {success}
           </div>
         )}
         
-        <div>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full bg-black border-2 border-gray-700 focus:border-white text-white rounded-sm py-3 px-4 transition-colors"
-            placeholder="Email"
-          />
-        </div>
-        
-        <div>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full bg-black border-2 border-gray-700 focus:border-white text-white rounded-sm py-3 px-4 transition-colors"
-            placeholder="Password"
-            minLength={6}
-          />
-        </div>
-        
         <button
           type="submit"
-          className="w-full bg-white text-black font-bold py-3 px-4 rounded-sm hover:bg-gray-200 transition-colors uppercase tracking-wider"
           disabled={loading}
+          className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
         >
-          {loading ? 'PROCESSING...' : isSignUp ? 'CREATE ACCOUNT' : 'SIGN IN'}
+          {loading ? 'Processing...' : mode === 'signin' ? 'Sign In' : 'Sign Up'}
         </button>
       </form>
+      
+      <div className="mt-4 text-center">
+        <button
+          onClick={toggleMode}
+          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+        >
+          {mode === 'signin' ? 'Need an account? Sign Up' : 'Already have an account? Sign In'}
+        </button>
+      </div>
     </div>
   );
-};
-
-export default AuthForm; 
+} 
