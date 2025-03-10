@@ -4,10 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/AuthContext';
 
+// Define valid plan types
+type PlanType = 'starter' | 'pro' | 'ultimate';
+
 interface PremiumFeaturesProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
-  minimumPlan?: 'starter' | 'pro' | 'ultimate';
+  minimumPlan?: PlanType;
 }
 
 /**
@@ -27,8 +30,8 @@ export default function PremiumFeatures({
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Plan hierarchy for access control
-  const planHierarchy = {
+  // Plan hierarchy for access control with proper type definition
+  const planHierarchy: Record<PlanType, number> = {
     'starter': 1,
     'pro': 2,
     'ultimate': 3
@@ -71,7 +74,9 @@ export default function PremiumFeatures({
         }
         
         // Check if the user's plan meets the minimum required plan
-        const userPlanLevel = planHierarchy[premiumStatus.planType || 'starter'] || 0;
+        // Cast the plan type to ensure TypeScript knows it's a valid key
+        const userPlanType = (premiumStatus.planType || 'starter') as PlanType;
+        const userPlanLevel = planHierarchy[userPlanType] || 0;
         const requiredPlanLevel = planHierarchy[minimumPlan] || 1;
         
         setHasAccess(userPlanLevel >= requiredPlanLevel);
